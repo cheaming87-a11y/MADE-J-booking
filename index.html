@@ -7,10 +7,10 @@
     <meta name="apple-mobile-web-app-title" content="MADE J">
     <meta name="theme-color" content="#f5f5f7">
     <title>MADE J Booking</title>
-    <link rel="stylesheet" href="styles.css?v=20260514-12">
+    <link rel="stylesheet" href="styles.css?v=20260514-13">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script defer src="supabase-config.js"></script>
-    <script defer src="admin.js?v=20260514-12"></script>
+    <script defer src="admin.js?v=20260514-13"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -84,59 +84,63 @@
             <button id="refreshButton" class="text-button" type="button">새로고침</button>
           </section>
 
-          <section class="sheet">
-            <div class="section-title collapsible-title">
-              <div>
-                <h2>예약 등록</h2>
-                <p>고객명과 연락처가 기존 고객과 같으면 자동으로 고객 DB에 합쳐집니다.</p>
-              </div>
-              <button id="toggleBookingFormButton" class="text-button" type="button" aria-expanded="false">펼치기</button>
+          <div class="booking-pager" id="bookingPager">
+            <div class="pager-indicator" aria-label="예약 화면">
+              <span id="bookingFormDot" class="active">예약등록</span>
+              <span id="bookingListDot">예약목록</span>
             </div>
-            <form id="ownerBookingForm" class="booking-form-panel collapsed" autocomplete="on">
-              <div class="field-row">
-                <div class="field">
-                  <label for="bookingDate">날짜</label>
-                  <input id="bookingDate" name="bookingDate" type="date" required>
+            <div id="bookingPanels" class="booking-panels">
+              <section class="sheet booking-page">
+                <div class="section-title">
+                  <h2>예약 등록</h2>
+                  <p>고객명과 연락처가 기존 고객과 같으면 자동으로 고객 DB에 합쳐집니다.</p>
                 </div>
-                <div class="field">
-                  <label for="bookingTime">시간</label>
-                  <input id="bookingTime" name="bookingTime" type="time" min="09:00" max="22:00" step="1800" required>
+                <form id="ownerBookingForm" autocomplete="on">
+                  <div class="field-row">
+                    <div class="field">
+                      <label for="bookingDate">날짜</label>
+                      <input id="bookingDate" name="bookingDate" type="date" required>
+                    </div>
+                    <div class="field">
+                      <label for="bookingTime">시간</label>
+                      <input id="bookingTime" name="bookingTime" type="time" min="09:00" max="22:00" step="1800" required>
+                    </div>
+                  </div>
+
+                  <div class="field-row">
+                    <div class="field">
+                      <label for="customerName">고객명</label>
+                      <input id="customerName" name="customerName" type="text" placeholder="고객 이름" required>
+                    </div>
+                    <div class="field">
+                      <label for="phone">연락처</label>
+                      <input id="phone" name="phone" type="tel" placeholder="010-0000-0000" inputmode="tel">
+                    </div>
+                  </div>
+
+                  <div class="field">
+                    <label for="servicePicker">시술 종류</label>
+                    <select id="servicePicker" name="servicePicker" required></select>
+                  </div>
+
+                  <div class="field">
+                    <label for="note">메모</label>
+                    <textarea id="note" name="note" rows="3" placeholder="시술 내용, 특이사항, 결제 메모"></textarea>
+                  </div>
+
+                  <button id="saveBookingButton" class="primary-button" type="submit">예약 저장</button>
+                  <p id="formMessage" class="message" role="status"></p>
+                </form>
+              </section>
+              <section class="sheet booking-page">
+                <div class="section-title">
+                  <h2>예약 목록</h2>
+                  <p id="adminMessage" role="status">예약 목록을 불러오세요.</p>
                 </div>
-              </div>
-
-              <div class="field-row">
-                <div class="field">
-                  <label for="customerName">고객명</label>
-                  <input id="customerName" name="customerName" type="text" placeholder="고객 이름" required>
-                </div>
-                <div class="field">
-                  <label for="phone">연락처</label>
-                  <input id="phone" name="phone" type="tel" placeholder="010-0000-0000" inputmode="tel">
-                </div>
-              </div>
-
-              <div class="field">
-                <label for="servicePicker">시술 종류</label>
-                <select id="servicePicker" name="servicePicker" required></select>
-              </div>
-
-              <div class="field">
-                <label for="note">메모</label>
-                <textarea id="note" name="note" rows="3" placeholder="시술 내용, 특이사항, 결제 메모"></textarea>
-              </div>
-
-              <button id="saveBookingButton" class="primary-button" type="submit">예약 저장</button>
-              <p id="formMessage" class="message" role="status"></p>
-            </form>
-          </section>
-
-          <section class="sheet">
-            <div class="section-title">
-              <h2>예약 목록</h2>
-              <p id="adminMessage" role="status">예약 목록을 불러오세요.</p>
+                <div id="bookingRows" class="booking-list"></div>
+              </section>
             </div>
-            <div id="bookingRows" class="booking-list"></div>
-          </section>
+          </div>
         </section>
 
         <section id="customerView" class="view-stack hidden">

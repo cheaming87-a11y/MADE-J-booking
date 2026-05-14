@@ -9,6 +9,8 @@ let selectedMoveDate = "";
 let editCustomerTarget = null;
 let calendarTouchStart = null;
 let calendarSwipeLock = false;
+let bookingPanelIndex = 0;
+let bookingTouchStart = null;
 
 const screenTitle = document.querySelector("#screenTitle");
 const loginPanel = document.querySelector("#loginPanel");
@@ -30,7 +32,10 @@ const monthCompletedCount = document.querySelector("#monthCompletedCount");
 const activeBookingCount = document.querySelector("#activeBookingCount");
 const backToCalendarButton = document.querySelector("#backToCalendarButton");
 const bookingForm = document.querySelector("#ownerBookingForm");
-const toggleBookingFormButton = document.querySelector("#toggleBookingFormButton");
+const bookingPager = document.querySelector("#bookingPager");
+const bookingPanels = document.querySelector("#bookingPanels");
+const bookingFormDot = document.querySelector("#bookingFormDot");
+const bookingListDot = document.querySelector("#bookingListDot");
 const bookingDate = document.querySelector("#bookingDate");
 const bookingTime = document.querySelector("#bookingTime");
 const customerName = document.querySelector("#customerName");
@@ -231,15 +236,31 @@ function renderCalendar() {
   renderDashboard();
 }
 
-function setBookingFormOpen(isOpen) {
-  bookingForm.classList.toggle("collapsed", !isOpen);
-  toggleBookingFormButton.textContent = isOpen ? "접기" : "펼치기";
-  toggleBookingFormButton.setAttribute("aria-expanded", String(isOpen));
-}
-
 function moveMainMonth(offset) {
   monthCursor = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + offset, 1);
   renderCalendar();
+}
+
+function setBookingPanel(index) {
+  bookingPanelIndex = index;
+  bookingPanels.classList.toggle("show-list", index === 1);
+  bookingFormDot.classList.toggle("active", index === 0);
+  bookingListDot.classList.toggle("active", index === 1);
+}
+
+function handleBookingTouchStart(event) {
+  const touch = event.changedTouches[0];
+  bookingTouchStart = { x: touch.clientX, y: touch.clientY };
+}
+
+function handleBookingTouchEnd(event) {
+  if (!bookingTouchStart) return;
+  const touch = event.changedTouches[0];
+  const diffX = touch.clientX - bookingTouchStart.x;
+  const diffY = touch.clientY - bookingTouchStart.y;
+  bookingTouchStart = null;
+  if (Math.abs(diffX) < 55 || Math.abs(diffX) < Math.abs(diffY) * 1.4) return;
+  setBookingPanel(diffX < 0 ? 1 : 0);
 }
 
 function handleCalendarTouchStart(event) {
@@ -451,7 +472,7 @@ async function saveBooking(event) {
   bookingForm.reset();
   bookingDate.value = filterDate.value;
   bookingTime.value = "10:00";
-  setBookingFormOpen(false);
+  setBookingPanel(1);
   renderServiceOptions();
   setMessage(formMessage, "예약을 저장했습니다.", "success");
   await loadCustomers();
@@ -593,7 +614,7 @@ async function submitMoveBooking() {
 function openDate(dateKey) {
   filterDate.value = dateKey;
   bookingDate.value = dateKey;
-  setBookingFormOpen(false);
+  setBookingPanel(1);
   showView("booking");
   loadBookings();
 }
@@ -675,8 +696,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     const button = event.target.closest("[data-date]");
     if (button) openDate(button.dataset.date);
   });
-  toggleBookingFormButton.addEventListener("click", () => {
-    setBookingFormOpen(bookingForm.classList.contains("collapsed"));
+  bookingPager.addEventListener("touchstart", handleBookingTouchStart, { passive: true });
+  bookingPager.addEventListener("touchend", handleBookingTouchEnd, { passive: true });
+  bookingFormDot.addEventListener("click", () => setBookingPanel(0));
+  bookingListDot.addEventListener("click", () => setBookingPanel(1));
+  bookingPager.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowLeft") setBookingPanel(0);
+    if (event.key === "ArrowRight") setBookingPanel(1);
   });
   bookingForm.addEventListener("submit", saveBooking);
   adminPassword.addEventListener("keydown", (event) => {

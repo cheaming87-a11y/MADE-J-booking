@@ -179,24 +179,6 @@ h2 {
   gap: 6px;
 }
 
-.collapsible-title {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
-  gap: 12px;
-}
-
-.collapsible-title > div {
-  min-width: 0;
-}
-
-.booking-form-panel {
-  display: block;
-}
-
-.booking-form-panel.collapsed {
-  display: none;
-}
-
 .calendar-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -286,6 +268,54 @@ h2 {
   font-size: 17px;
   font-weight: 850;
   letter-spacing: 0;
+}
+
+.booking-pager {
+  display: grid;
+  gap: 10px;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.pager-indicator {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  border-radius: 16px;
+  background: rgba(118, 118, 128, 0.12);
+  padding: 4px;
+}
+
+.pager-indicator span {
+  min-width: 0;
+  border-radius: 12px;
+  color: var(--subtext);
+  font-size: 13px;
+  font-weight: 850;
+  padding: 9px 8px;
+  text-align: center;
+}
+
+.pager-indicator span.active {
+  background: #fff;
+  color: var(--text);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.booking-panels {
+  display: grid;
+  grid-template-columns: repeat(2, 100%);
+  gap: 12px;
+  transition: transform 0.22s ease;
+}
+
+.booking-panels.show-list {
+  transform: translateX(calc(-100% - 12px));
+}
+
+.booking-page {
+  align-self: start;
+  min-width: 0;
 }
 
 .calendar-day.selected {
@@ -730,8 +760,7 @@ textarea:focus {
   .field-row,
   .booking-card,
   .date-strip,
-  .calendar-header,
-  .collapsible-title {
+  .calendar-header {
     grid-template-columns: 1fr;
   }
 
