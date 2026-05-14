@@ -1,5 +1,6 @@
 let client = null;
 let customers = [];
+let customerBookings = [];
 let services = [];
 
 const loginPanel = document.querySelector("#loginPanel");
@@ -73,6 +74,12 @@ function addMinutes(timeValue, minutes) {
   return `${String(nextHours).padStart(2, "0")}:${String(nextMins).padStart(2, "0")}`;
 }
 
+function daysBetween(a, b) {
+  const start = new Date(`${a}T00:00:00`);
+  const end = new Date(`${b}T00:00:00`);
+  return Math.round((end - start) / 86400000);
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -105,8 +112,12 @@ function renderServiceOptions() {
   updateDurationPreview();
 }
 
+function activeCustomers() {
+  return customers.filter((customer) => customer.is_active !== false);
+}
+
 function renderCustomerOptions() {
-  const options = customers
+  const options = activeCustomers()
     .map((customer) => {
       const label = customer.phone ? `${customer.name} · ${customer.phone}` : customer.name;
       return `<option value="${customer.id}">${escapeHtml(label)}</option>`;
@@ -116,25 +127,69 @@ function renderCustomerOptions() {
   customerPicker.innerHTML = `<option value="">신규 고객으로 등록</option>${options}`;
 }
 
+function customerStats(customer) {
+  const matches = customerBookings
+    .filter((booking) => {
+      if (booking.status === "cancelled") return false;
+      if (booking.customer_id && booking.customer_id === customer.id) return true;
+      if (customer.phone && booking.phone === customer.phone) return true;
+      return booking.customer_name === customer.name;
+    })
+    .map((booking) => booking.booking_date)
+    .filter(Boolean)
+    .sort();
+
+  const uniqueDates = [...new Set(matches)];
+  const visitCount = uniqueDates.length;
+  const recentVisit = visitCount ? uniqueDates[visitCount - 1] : "없음";
+
+  if (uniqueDates.length < 2) {
+    return { visitCount, recentVisit, cycleText: "계산 전" };
+  }
+
+  const intervals = [];
+  for (let i = 1; i < uniqueDates.length; i += 1) {
+    const gap = daysBetween(uniqueDates[i - 1], uniqueDates[i]);
+    if (gap >= 0) intervals.push(gap);
+  }
+
+  const average = intervals.reduce((sum, gap) => sum + gap, 0) / intervals.length;
+  return { visitCount, recentVisit, cycleText: `${Math.round(average)}일` };
+}
+
 function renderCustomers() {
-  if (!customers.length) {
+  const visibleCustomers = activeCustomers();
+
+  if (!visibleCustomers.length) {
     customerRows.innerHTML = `<div class="empty-state">저장된 고객이 없습니다.</div>`;
     setMessage(customerMessage, "예약 등록 시 고객 정보가 자동 저장됩니다.");
     return;
   }
 
-  customerRows.innerHTML = customers
-    .slice(0, 20)
-    .map((customer) => `
-      <div class="compact-item">
-        <div>
-          <strong>${escapeHtml(customer.name)}</strong>
-          <span>${escapeHtml(customer.phone || "연락처 없음")}</span>
+  customerRows.innerHTML = visibleCustomers
+    .slice(0, 30)
+    .map((customer) => {
+      const stats = customerStats(customer);
+      return `
+        <div class="customer-card" data-customer-id="${customer.id}">
+          <div class="customer-main">
+            <strong>${escapeHtml(customer.name)}</strong>
+            <span>${escapeHtml(customer.phone || "연락처 없음")}</span>
+          </div>
+          <div class="customer-stats">
+            <span>방문 ${stats.visitCount}회</span>
+            <span>최근 ${escapeHtml(stats.recentVisit)}</span>
+            <span>주기 ${escapeHtml(stats.cycleText)}</span>
+          </div>
+          <div class="customer-actions">
+            <button class="mini-button" type="button" data-action="edit-customer" data-id="${customer.id}">수정</button>
+            <button class="mini-button danger" type="button" data-action="delete-customer" data-id="${customer.id}">삭제</button>
+          </div>
         </div>
-      </div>
-    `)
+      `;
+    })
     .join("");
-  setMessage(customerMessage, `${customers.length}명의 고객이 저장되어 있습니다.`, "success");
+  setMessage(customerMessage, `${visibleCustomers.length}명의 고객`, "success");
 }
 
 function renderRows(bookings) {
@@ -185,12 +240,13 @@ async function loadServices() {
 }
 
 async function loadCustomers() {
-  const { data, error } = await client
-    .from("customers")
-    .select("*")
-    .order("updated_at", { ascending: false });
+  const [{ data: customerData, error: customerError }, { data: bookingData }] = await Promise.all([
+    client.from("customers").select("*").order("updated_at", { ascending: false }),
+    client.from("bookings").select("customer_id, customer_name, phone, booking_date, status").order("booking_date", { ascending: true })
+  ]);
 
-  customers = error ? [] : data || [];
+  customers = customerError ? [] : customerData || [];
+  customerBookings = bookingData || [];
   renderCustomerOptions();
   renderCustomers();
 }
@@ -232,7 +288,7 @@ async function upsertCustomer() {
   if (existing) {
     const { data } = await client
       .from("customers")
-      .update({ name, phone: phoneValue || null, updated_at: new Date().toISOString() })
+      .update({ name, phone: phoneValue || null, is_active: true, updated_at: new Date().toISOString() })
       .eq("id", existing.id)
       .select()
       .single();
@@ -241,7 +297,7 @@ async function upsertCustomer() {
 
   const { data, error } = await client
     .from("customers")
-    .insert({ name, phone: phoneValue || null })
+    .insert({ name, phone: phoneValue || null, is_active: true })
     .select()
     .single();
 
@@ -312,6 +368,53 @@ async function insertBooking(payload) {
   return publicClient.from("bookings").insert(payload);
 }
 
+async function editCustomer(id) {
+  const customer = customers.find((item) => item.id === id);
+  if (!customer) return;
+
+  const nextName = window.prompt("고객명", customer.name);
+  if (nextName === null) return;
+
+  const nextPhone = window.prompt("연락처", customer.phone || "");
+  if (nextPhone === null) return;
+
+  const { error } = await client
+    .from("customers")
+    .update({
+      name: nextName.trim(),
+      phone: nextPhone.trim() || null,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", id);
+
+  if (error) {
+    setMessage(customerMessage, "고객 수정에 실패했습니다.", "error");
+    return;
+  }
+
+  await loadCustomers();
+}
+
+async function deleteCustomer(id) {
+  const customer = customers.find((item) => item.id === id);
+  if (!customer) return;
+
+  const ok = window.confirm(`${customer.name} 고객을 목록에서 삭제할까요? 예약 기록은 유지됩니다.`);
+  if (!ok) return;
+
+  const { error } = await client
+    .from("customers")
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) {
+    setMessage(customerMessage, "고객 삭제에 실패했습니다. DB 업데이트가 필요할 수 있습니다.", "error");
+    return;
+  }
+
+  await loadCustomers();
+}
+
 async function login() {
   if (!client) return;
 
@@ -358,6 +461,7 @@ async function cancelBooking(id) {
     return;
   }
 
+  await loadCustomers();
   await loadBookings();
 }
 
@@ -391,6 +495,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   bookingRows.addEventListener("click", (event) => {
     const button = event.target.closest("[data-id]");
     if (button) cancelBooking(button.dataset.id);
+  });
+  customerRows.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    if (button.dataset.action === "edit-customer") editCustomer(button.dataset.id);
+    if (button.dataset.action === "delete-customer") deleteCustomer(button.dataset.id);
   });
 
   if (!client) return;
