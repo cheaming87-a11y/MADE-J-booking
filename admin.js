@@ -119,7 +119,7 @@ async function saveBooking(event) {
     status: "confirmed"
   };
 
-  const { error } = await client.from("bookings").insert(payload);
+  const { error } = await insertBooking(payload);
   saveBookingButton.disabled = false;
 
   if (error) {
@@ -137,6 +137,22 @@ async function saveBooking(event) {
   bookingTime.value = "10:00";
   setMessage(formMessage, "예약을 저장했습니다.", "success");
   await loadBookings();
+}
+
+async function insertBooking(payload) {
+  const result = await client.from("bookings").insert(payload);
+  if (!result.error || result.error.code !== "42501") {
+    return result;
+  }
+
+  // Older installs allowed only anon inserts. Keep saving functional until the
+  // owner-only RLS migration is applied in Supabase.
+  const config = window.MADE_J_SUPABASE;
+  const publicClient = window.supabase.createClient(config.url, config.anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+
+  return publicClient.from("bookings").insert(payload);
 }
 
 async function login() {
