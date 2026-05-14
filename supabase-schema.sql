@@ -21,10 +21,10 @@ from public.bookings
 where status = 'confirmed';
 
 drop policy if exists "Anyone can create bookings" on public.bookings;
-create policy "Anyone can create bookings"
+create policy "Admins can create bookings"
 on public.bookings
 for insert
-to anon
+to authenticated
 with check (status = 'confirmed');
 
 drop policy if exists "Admins can read bookings" on public.bookings;
@@ -42,6 +42,7 @@ to authenticated
 using (true)
 with check (status in ('confirmed', 'cancelled'));
 
-grant select on public.booked_slots to anon, authenticated;
-grant insert on public.bookings to anon;
-grant select, update on public.bookings to authenticated;
+revoke all on public.bookings from anon;
+revoke all on public.booked_slots from anon;
+grant select on public.booked_slots to authenticated;
+grant insert, select, update on public.bookings to authenticated;

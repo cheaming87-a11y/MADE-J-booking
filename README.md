@@ -1,15 +1,14 @@
 # MADE J Booking
 
-GitHub Pages + Supabase 무료 플랜으로 운영할 수 있는 정적 예약 웹앱입니다.
+원장 혼자 사용하는 예약 관리 웹앱입니다. GitHub Pages + Supabase 무료 플랜으로 운영합니다.
 
 ## 구성
 
-- `index.html`: 고객 예약 페이지
-- `admin.html`: 관리자 예약 목록 페이지
+- `index.html`: 원장 전용 예약 관리 페이지
+- `admin.html`: 기존 관리자 주소에서 `index.html`로 이동
 - `styles.css`: 전체 스타일
 - `supabase-config.js`: Supabase 접속 설정
-- `app.js`: 예약 등록 로직
-- `admin.js`: 예약 조회/상태 변경 로직
+- `admin.js`: 로그인, 예약 등록, 예약 조회, 예약 취소 로직
 - `supabase-schema.sql`: Supabase 테이블과 보안 정책 SQL
 
 ## 1. Supabase 설정
@@ -50,8 +49,8 @@ window.MADE_J_SUPABASE = {
 https://본인아이디.github.io/MADE-J-booking/
 ```
 
-## 관리자 접근
+## 사용 방식
 
-`admin.html`에서 Supabase Auth 이메일/비밀번호로 로그인해야 예약 목록을 볼 수 있습니다.
+`index.html`에서 Supabase Auth 이메일/비밀번호로 로그인해야 예약을 등록하거나 볼 수 있습니다.
 
 정적 웹앱 구조상 `anon public key`는 브라우저에 공개됩니다. 보안은 키를 숨기는 방식이 아니라 Supabase RLS 정책으로 제어합니다.

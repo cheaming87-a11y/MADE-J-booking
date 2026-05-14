@@ -7,69 +7,92 @@
     <link rel="stylesheet" href="styles.css">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script defer src="supabase-config.js"></script>
-    <script defer src="app.js"></script>
+    <script defer src="admin.js"></script>
   </head>
   <body>
     <main class="shell">
-      <section class="hero">
+      <section class="hero compact">
         <div>
-          <p class="eyebrow">Reservation</p>
-          <h1>MADE J Booking</h1>
-          <p class="lead">원하는 날짜와 시간을 선택해 예약을 접수하세요.</p>
+          <p class="eyebrow">MADE J</p>
+          <h1>예약 관리</h1>
+          <p class="lead">원장 전용 예약 등록 및 일정 확인 프로그램입니다.</p>
         </div>
-        <a class="admin-link" href="admin.html" aria-label="관리자 페이지">Admin</a>
       </section>
 
-      <section class="booking-layout">
-        <form id="bookingForm" class="panel" autocomplete="on">
+      <section id="loginPanel" class="panel">
+        <div class="login-grid">
           <div class="field">
-            <label for="bookingDate">날짜</label>
-            <input id="bookingDate" name="bookingDate" type="date" required>
+            <label for="adminEmail">이메일</label>
+            <input id="adminEmail" type="email" placeholder="admin@example.com" autocomplete="email">
           </div>
-
           <div class="field">
-            <label>시간</label>
-            <div id="timeGrid" class="time-grid" aria-live="polite"></div>
+            <label for="adminPassword">비밀번호</label>
+            <input id="adminPassword" type="password" placeholder="비밀번호" autocomplete="current-password">
           </div>
+          <button id="loginButton" class="primary-button" type="button">로그인</button>
+        </div>
+        <p id="loginMessage" class="message" role="status"></p>
+      </section>
 
+      <section id="adminPanel" class="admin-layout hidden">
+        <form id="ownerBookingForm" class="panel" autocomplete="on">
+          <h2>예약 등록</h2>
+          <div class="form-grid">
+            <div class="field">
+              <label for="bookingDate">날짜</label>
+              <input id="bookingDate" name="bookingDate" type="date" required>
+            </div>
+            <div class="field">
+              <label for="bookingTime">시간</label>
+              <input id="bookingTime" name="bookingTime" type="time" min="09:00" max="22:00" step="1800" required>
+            </div>
+            <div class="field">
+              <label for="customerName">고객명</label>
+              <input id="customerName" name="customerName" type="text" placeholder="고객 이름" required>
+            </div>
+            <div class="field">
+              <label for="phone">연락처</label>
+              <input id="phone" name="phone" type="tel" placeholder="010-0000-0000">
+            </div>
+          </div>
           <div class="field">
-            <label for="customerName">이름</label>
-            <input id="customerName" name="customerName" type="text" placeholder="예약자 이름" required>
+            <label for="note">메모</label>
+            <textarea id="note" name="note" rows="4" placeholder="시술 내용, 특이사항, 결제 메모 등"></textarea>
           </div>
-
-          <div class="field">
-            <label for="phone">연락처</label>
-            <input id="phone" name="phone" type="tel" placeholder="010-0000-0000" required>
-          </div>
-
-          <div class="field">
-            <label for="note">요청사항</label>
-            <textarea id="note" name="note" rows="4" placeholder="선택 입력"></textarea>
-          </div>
-
-          <button id="submitButton" class="primary-button" type="submit">예약하기</button>
+          <button id="saveBookingButton" class="primary-button" type="submit">예약 저장</button>
           <p id="formMessage" class="message" role="status"></p>
         </form>
 
-        <aside class="summary">
-          <h2>예약 안내</h2>
-          <dl>
-            <div>
-              <dt>운영 시간</dt>
-              <dd>10:00 - 19:00</dd>
+        <section class="panel">
+          <div class="toolbar">
+            <div class="field inline">
+              <label for="filterDate">조회 날짜</label>
+              <input id="filterDate" type="date">
             </div>
-            <div>
-              <dt>예약 단위</dt>
-              <dd>1시간</dd>
+            <div class="actions">
+              <button id="refreshButton" class="secondary-button" type="button">새로고침</button>
+              <button id="logoutButton" class="ghost-button" type="button">로그아웃</button>
             </div>
-            <div>
-              <dt>확정 방식</dt>
-              <dd>예약 가능한 시간만 접수됩니다.</dd>
-            </div>
-          </dl>
-        </aside>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>시간</th>
+                  <th>고객명</th>
+                  <th>연락처</th>
+                  <th>메모</th>
+                  <th>상태</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="bookingRows"></tbody>
+            </table>
+          </div>
+          <p id="adminMessage" class="message" role="status"></p>
+        </section>
       </section>
     </main>
   </body>
 </html>
-

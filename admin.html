@@ -3,67 +3,10 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>MADE J Booking Admin</title>
-    <link rel="stylesheet" href="styles.css">
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script defer src="supabase-config.js"></script>
-    <script defer src="admin.js"></script>
+    <title>MADE J Booking</title>
+    <meta http-equiv="refresh" content="0; url=index.html">
   </head>
   <body>
-    <main class="shell">
-      <section class="hero compact">
-        <div>
-          <p class="eyebrow">Admin</p>
-          <h1>예약 관리</h1>
-        </div>
-        <a class="admin-link" href="index.html">예약 페이지</a>
-      </section>
-
-      <section id="loginPanel" class="panel">
-        <div class="login-grid">
-          <div class="field">
-            <label for="adminEmail">관리자 이메일</label>
-            <input id="adminEmail" type="email" placeholder="admin@example.com" autocomplete="email">
-          </div>
-          <div class="field">
-            <label for="adminPassword">비밀번호</label>
-            <input id="adminPassword" type="password" placeholder="비밀번호" autocomplete="current-password">
-          </div>
-          <button id="loginButton" class="primary-button" type="button">로그인</button>
-        </div>
-        <p id="loginMessage" class="message" role="status"></p>
-      </section>
-
-      <section id="adminPanel" class="panel hidden">
-        <div class="toolbar">
-          <div class="field inline">
-            <label for="filterDate">날짜</label>
-            <input id="filterDate" type="date">
-          </div>
-          <div class="actions">
-            <button id="refreshButton" class="secondary-button" type="button">새로고침</button>
-            <button id="logoutButton" class="ghost-button" type="button">로그아웃</button>
-          </div>
-        </div>
-
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>날짜</th>
-                <th>시간</th>
-                <th>이름</th>
-                <th>연락처</th>
-                <th>요청사항</th>
-                <th>상태</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="bookingRows"></tbody>
-          </table>
-        </div>
-        <p id="adminMessage" class="message" role="status"></p>
-      </section>
-    </main>
+    <p><a href="index.html">MADE J Booking으로 이동</a></p>
   </body>
 </html>

@@ -7,19 +7,19 @@ const adminPassword = document.querySelector("#adminPassword");
 const loginButton = document.querySelector("#loginButton");
 const logoutButton = document.querySelector("#logoutButton");
 const loginMessage = document.querySelector("#loginMessage");
+const bookingForm = document.querySelector("#ownerBookingForm");
+const bookingDate = document.querySelector("#bookingDate");
+const bookingTime = document.querySelector("#bookingTime");
+const saveBookingButton = document.querySelector("#saveBookingButton");
+const formMessage = document.querySelector("#formMessage");
 const filterDate = document.querySelector("#filterDate");
 const refreshButton = document.querySelector("#refreshButton");
 const bookingRows = document.querySelector("#bookingRows");
 const adminMessage = document.querySelector("#adminMessage");
 
-function setLoginMessage(text, type = "") {
-  loginMessage.textContent = text;
-  loginMessage.className = `message ${type}`.trim();
-}
-
-function setAdminMessage(text, type = "") {
-  adminMessage.textContent = text;
-  adminMessage.className = `message ${type}`.trim();
+function setMessage(element, text, type = "") {
+  element.textContent = text;
+  element.className = `message ${type}`.trim();
 }
 
 function getToday() {
@@ -31,7 +31,7 @@ function getToday() {
 function initSupabase() {
   const config = window.MADE_J_SUPABASE;
   if (!config || config.url.includes("YOUR_PROJECT") || config.anonKey.includes("YOUR_SUPABASE")) {
-    setLoginMessage("Supabase 설정이 필요합니다. supabase-config.js를 먼저 수정하세요.", "error");
+    setMessage(loginMessage, "Supabase 설정이 필요합니다.", "error");
     return null;
   }
 
@@ -47,34 +47,6 @@ function formatTime(value) {
   return String(value).slice(0, 5);
 }
 
-function renderRows(bookings) {
-  bookingRows.innerHTML = "";
-
-  if (!bookings.length) {
-    const row = document.createElement("tr");
-    row.innerHTML = `<td colspan="7">예약 내역이 없습니다.</td>`;
-    bookingRows.appendChild(row);
-    return;
-  }
-
-  bookings.forEach((booking) => {
-    const row = document.createElement("tr");
-    const isCancelled = booking.status === "cancelled";
-
-    row.innerHTML = `
-      <td>${booking.booking_date}</td>
-      <td>${formatTime(booking.booking_time)}</td>
-      <td>${escapeHtml(booking.customer_name)}</td>
-      <td>${escapeHtml(booking.phone)}</td>
-      <td>${escapeHtml(booking.note || "")}</td>
-      <td><span class="status ${isCancelled ? "cancelled" : ""}">${isCancelled ? "취소" : "확정"}</span></td>
-      <td>${isCancelled ? "" : `<button class="link-button" type="button" data-id="${booking.id}">취소</button>`}</td>
-    `;
-
-    bookingRows.appendChild(row);
-  });
-}
-
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -84,10 +56,37 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function renderRows(bookings) {
+  bookingRows.innerHTML = "";
+
+  if (!bookings.length) {
+    const row = document.createElement("tr");
+    row.innerHTML = `<td colspan="6">예약이 없습니다.</td>`;
+    bookingRows.appendChild(row);
+    return;
+  }
+
+  bookings.forEach((booking) => {
+    const row = document.createElement("tr");
+    const isCancelled = booking.status === "cancelled";
+
+    row.innerHTML = `
+      <td>${formatTime(booking.booking_time)}</td>
+      <td>${escapeHtml(booking.customer_name)}</td>
+      <td>${escapeHtml(booking.phone || "")}</td>
+      <td>${escapeHtml(booking.note || "")}</td>
+      <td><span class="status ${isCancelled ? "cancelled" : ""}">${isCancelled ? "취소" : "확정"}</span></td>
+      <td>${isCancelled ? "" : `<button class="link-button" type="button" data-id="${booking.id}">취소</button>`}</td>
+    `;
+
+    bookingRows.appendChild(row);
+  });
+}
+
 async function loadBookings() {
   if (!client) return;
 
-  setAdminMessage("예약 목록을 불러오는 중입니다.");
+  setMessage(adminMessage, "예약 목록을 불러오는 중입니다.");
 
   const { data, error } = await client
     .from("bookings")
@@ -96,19 +95,55 @@ async function loadBookings() {
     .order("booking_time", { ascending: true });
 
   if (error) {
-    setAdminMessage("예약 목록을 불러오지 못했습니다.", "error");
+    setMessage(adminMessage, "예약 목록을 불러오지 못했습니다.", "error");
     return;
   }
 
   renderRows(data || []);
-  setAdminMessage(`${data.length}건의 예약을 표시했습니다.`, "success");
+  setMessage(adminMessage, `${data.length}건의 예약을 표시했습니다.`, "success");
+}
+
+async function saveBooking(event) {
+  event.preventDefault();
+  if (!client) return;
+
+  saveBookingButton.disabled = true;
+  setMessage(formMessage, "예약을 저장하는 중입니다.");
+
+  const payload = {
+    booking_date: bookingDate.value,
+    booking_time: bookingTime.value,
+    customer_name: bookingForm.customerName.value.trim(),
+    phone: bookingForm.phone.value.trim() || "",
+    note: bookingForm.note.value.trim() || null,
+    status: "confirmed"
+  };
+
+  const { error } = await client.from("bookings").insert(payload);
+  saveBookingButton.disabled = false;
+
+  if (error) {
+    if (error.code === "23505") {
+      setMessage(formMessage, "이미 같은 날짜와 시간에 예약이 있습니다.", "error");
+      return;
+    }
+
+    setMessage(formMessage, "예약 저장에 실패했습니다.", "error");
+    return;
+  }
+
+  bookingForm.reset();
+  bookingDate.value = filterDate.value;
+  bookingTime.value = "10:00";
+  setMessage(formMessage, "예약을 저장했습니다.", "success");
+  await loadBookings();
 }
 
 async function login() {
   if (!client) return;
 
   loginButton.disabled = true;
-  setLoginMessage("로그인 중입니다.");
+  setMessage(loginMessage, "로그인 중입니다.");
 
   const { error } = await client.auth.signInWithPassword({
     email: adminEmail.value.trim(),
@@ -118,11 +153,11 @@ async function login() {
   loginButton.disabled = false;
 
   if (error) {
-    setLoginMessage("로그인에 실패했습니다.", "error");
+    setMessage(loginMessage, "로그인에 실패했습니다.", "error");
     return;
   }
 
-  setLoginMessage("");
+  setMessage(loginMessage, "");
   showAdmin(true);
   await loadBookings();
 }
@@ -132,7 +167,7 @@ async function logout() {
   await client.auth.signOut();
   showAdmin(false);
   bookingRows.innerHTML = "";
-  setAdminMessage("");
+  setMessage(adminMessage, "");
 }
 
 async function cancelBooking(id) {
@@ -144,7 +179,7 @@ async function cancelBooking(id) {
     .eq("id", id);
 
   if (error) {
-    setAdminMessage("예약 취소에 실패했습니다.", "error");
+    setMessage(adminMessage, "예약 취소에 실패했습니다.", "error");
     return;
   }
 
@@ -152,16 +187,23 @@ async function cancelBooking(id) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
-  filterDate.value = getToday();
+  const today = getToday();
+  filterDate.value = today;
+  bookingDate.value = today;
+  bookingTime.value = "10:00";
   client = initSupabase();
 
   loginButton.addEventListener("click", login);
   logoutButton.addEventListener("click", logout);
+  bookingForm.addEventListener("submit", saveBooking);
   adminPassword.addEventListener("keydown", (event) => {
     if (event.key === "Enter") login();
   });
   refreshButton.addEventListener("click", loadBookings);
-  filterDate.addEventListener("change", loadBookings);
+  filterDate.addEventListener("change", () => {
+    bookingDate.value = filterDate.value;
+    loadBookings();
+  });
   bookingRows.addEventListener("click", (event) => {
     const button = event.target.closest("[data-id]");
     if (button) cancelBooking(button.dataset.id);
