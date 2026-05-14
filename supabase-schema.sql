@@ -10,7 +10,7 @@ create table if not exists public.bookings (
   customer_name text not null,
   phone text not null,
   note text,
-  status text not null default 'confirmed' check (status in ('confirmed', 'cancelled')),
+  status text not null default 'confirmed' check (status in ('confirmed', 'cancelled', 'completed')),
   created_at timestamptz not null default now()
 );
 
@@ -69,7 +69,14 @@ on public.bookings
 for update
 to authenticated
 using (true)
-with check (status in ('confirmed', 'cancelled'));
+with check (status in ('confirmed', 'cancelled', 'completed'));
+
+drop policy if exists "Admins can delete bookings" on public.bookings;
+create policy "Admins can delete bookings"
+on public.bookings
+for delete
+to authenticated
+using (true);
 
 drop policy if exists "Admins can manage customers" on public.customers;
 create policy "Admins can manage customers"
@@ -89,6 +96,6 @@ using (true);
 revoke all on public.bookings from anon;
 revoke all on public.booked_slots from anon;
 grant select on public.booked_slots to authenticated;
-grant insert, select, update on public.bookings to authenticated;
+grant insert, select, update, delete on public.bookings to authenticated;
 grant select, insert, update on public.customers to authenticated;
 grant select on public.services to authenticated;

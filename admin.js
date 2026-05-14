@@ -130,10 +130,11 @@ function customerMatchesBooking(customer, booking) {
 }
 
 function customerStats(customer) {
+  const today = getToday();
   const dates = customerBookings
     .filter((booking) => customerMatchesBooking(customer, booking))
     .map((booking) => booking.booking_date)
-    .filter(Boolean)
+    .filter((date) => date && date <= today)
     .sort();
   const uniqueDates = [...new Set(dates)];
   const visitCount = uniqueDates.length;
@@ -164,7 +165,7 @@ function statsForBooking(booking) {
 }
 
 function bookingsForDate(dateKey) {
-  return customerBookings.filter((booking) => booking.booking_date === dateKey);
+  return customerBookings.filter((booking) => booking.booking_date === dateKey && booking.status === "confirmed");
 }
 
 function renderCalendar() {
@@ -252,7 +253,11 @@ function renderRows(bookings) {
         ${booking.phone ? `<div class="booking-phone">${escapeHtml(booking.phone)}</div>` : ""}
         <div class="booking-service">마지막 방문 ${escapeHtml(stats.recentVisit)} · 재방문주기 ${escapeHtml(stats.cycleText)}</div>
         ${booking.note ? `<div class="booking-note">${escapeHtml(booking.note)}</div>` : ""}
-        <button class="link-button" type="button" data-id="${booking.id}">예약 삭제</button>
+        <div class="booking-actions">
+          <button class="mini-button success" type="button" data-action="complete-booking" data-id="${booking.id}">완료</button>
+          <button class="mini-button" type="button" data-action="move-booking" data-id="${booking.id}">예약변경</button>
+          <button class="mini-button danger" type="button" data-action="cancel-booking" data-id="${booking.id}">예약취소</button>
+        </div>
       </div>
     `;
     bookingRows.appendChild(card);
@@ -272,7 +277,7 @@ async function loadServices() {
 async function loadCustomers() {
   const [{ data: customerData, error: customerError }, { data: bookingData }] = await Promise.all([
     client.from("customers").select("*").order("updated_at", { ascending: false }),
-    client.from("bookings").select("id, customer_id, customer_name, phone, booking_date").order("booking_date", { ascending: true })
+    client.from("bookings").select("id, customer_id, customer_name, phone, booking_date, status").neq("status", "cancelled").order("booking_date", { ascending: true })
   ]);
   customers = customerError ? [] : customerData || [];
   customerBookings = bookingData || [];
@@ -287,6 +292,7 @@ async function loadBookings() {
     .from("bookings")
     .select("*")
     .eq("booking_date", filterDate.value)
+    .eq("status", "confirmed")
     .order("booking_time", { ascending: true });
   if (error) {
     setMessage(adminMessage, "예약 목록을 불러오지 못했습니다.", "error");
@@ -391,14 +397,57 @@ async function deleteCustomer(id) {
   await loadCustomers();
 }
 
-async function deleteBooking(id) {
+async function cancelBooking(id) {
   if (!client) return;
-  if (!window.confirm("이 예약을 삭제할까요?")) return;
+  if (!window.confirm("예약을 취소할까요? 취소한 예약은 목록에서 삭제됩니다.")) return;
   const { error } = await client.from("bookings").delete().eq("id", id);
   if (error) {
-    setMessage(adminMessage, "예약 삭제에 실패했습니다. DB 권한 업데이트가 필요할 수 있습니다.", "error");
+    setMessage(adminMessage, "예약취소에 실패했습니다. DB 권한 업데이트가 필요할 수 있습니다.", "error");
     return;
   }
+  await loadCustomers();
+  await loadBookings();
+}
+
+async function completeBooking(id) {
+  if (!client) return;
+  if (!window.confirm("이 예약을 완료 처리할까요? 완료된 예약은 방문기록에 남고 예약목록에서는 사라집니다.")) return;
+  const { error } = await client.from("bookings").update({ status: "completed" }).eq("id", id);
+  if (error) {
+    setMessage(adminMessage, "완료 처리에 실패했습니다. DB 업데이트가 필요합니다.", "error");
+    return;
+  }
+  await loadCustomers();
+  await loadBookings();
+}
+
+async function moveBooking(id) {
+  if (!client) return;
+  const current = filterDate.value || getToday();
+  const nextDate = window.prompt("옮길 날짜를 입력하세요. 예: 2026-05-20", current);
+  if (nextDate === null) return;
+  const dateValue = nextDate.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    setMessage(adminMessage, "날짜 형식은 YYYY-MM-DD로 입력하세요.", "error");
+    return;
+  }
+  const nextTime = window.prompt("옮길 시간을 입력하세요. 예: 14:30", "10:00");
+  if (nextTime === null) return;
+  const timeValue = nextTime.trim();
+  if (!/^\d{2}:\d{2}$/.test(timeValue)) {
+    setMessage(adminMessage, "시간 형식은 HH:MM으로 입력하세요.", "error");
+    return;
+  }
+  const { error } = await client
+    .from("bookings")
+    .update({ booking_date: dateValue, booking_time: timeValue })
+    .eq("id", id);
+  if (error) {
+    setMessage(adminMessage, error.code === "23505" ? "옮길 시간에 이미 예약이 있습니다." : "예약변경에 실패했습니다.", "error");
+    return;
+  }
+  filterDate.value = dateValue;
+  bookingDate.value = dateValue;
   await loadCustomers();
   await loadBookings();
 }
@@ -474,8 +523,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     loadBookings();
   });
   bookingRows.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-id]");
-    if (button) deleteBooking(button.dataset.id);
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    if (button.dataset.action === "complete-booking") completeBooking(button.dataset.id);
+    if (button.dataset.action === "move-booking") moveBooking(button.dataset.id);
+    if (button.dataset.action === "cancel-booking") cancelBooking(button.dataset.id);
   });
   customerRows.addEventListener("click", (event) => {
     const button = event.target.closest("[data-action]");

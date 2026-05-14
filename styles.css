@@ -25,6 +25,7 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at 20% -10%, rgba(0, 122, 255, 0.14), transparent 30%),
     radial-gradient(circle at 100% 0%, rgba(52, 199, 89, 0.12), transparent 28%),
@@ -343,6 +344,7 @@ textarea:focus {
   grid-template-columns: 66px minmax(0, 1fr);
   gap: 12px;
   align-items: start;
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 20px;
   background: var(--sheet-solid);
@@ -425,6 +427,13 @@ textarea:focus {
   font-weight: 800;
 }
 
+.booking-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 2px;
+}
+
 .empty-state {
   border: 1px dashed var(--line);
   border-radius: 20px;
@@ -504,11 +513,17 @@ textarea:focus {
   font: inherit;
   font-size: 14px;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .mini-button.danger {
   background: rgba(255, 59, 48, 0.1);
   color: var(--red);
+}
+
+.mini-button.success {
+  background: rgba(52, 199, 89, 0.12);
+  color: #248a3d;
 }
 
 .compact-item div {
@@ -549,7 +564,7 @@ textarea:focus {
   }
 }
 
-@media (max-width: 390px) {
+@media (max-width: 600px) {
   .app-shell {
     padding-inline: 12px;
   }
@@ -574,5 +589,13 @@ textarea:focus {
   .booking-time {
     width: fit-content;
     min-width: 72px;
+  }
+
+  .booking-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-stats {
+    grid-template-columns: 1fr;
   }
 }
