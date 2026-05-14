@@ -7,10 +7,10 @@
     <meta name="apple-mobile-web-app-title" content="MADE J">
     <meta name="theme-color" content="#f5f5f7">
     <title>MADE J Booking</title>
-    <link rel="stylesheet" href="styles.css?v=20260514-7">
+    <link rel="stylesheet" href="styles.css?v=20260514-9">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script defer src="supabase-config.js"></script>
-    <script defer src="admin.js?v=20260514-7"></script>
+    <script defer src="admin.js?v=20260514-9"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -139,5 +139,32 @@
         </section>
       </section>
     </main>
+    <section id="moveDialog" class="modal hidden" aria-label="예약변경">
+      <div class="modal-backdrop" data-action="close-move"></div>
+      <div class="modal-sheet" role="dialog" aria-modal="true">
+        <div class="modal-heading">
+          <div>
+            <p>예약변경</p>
+            <h2 id="moveTitle">날짜와 시간 선택</h2>
+          </div>
+          <button id="closeMoveButton" class="text-button" type="button">닫기</button>
+        </div>
+        <div class="move-calendar-header">
+          <button id="movePrevMonthButton" class="text-button" type="button">이전</button>
+          <strong id="moveCalendarTitle">월별 캘린더</strong>
+          <button id="moveNextMonthButton" class="text-button" type="button">다음</button>
+        </div>
+        <div class="calendar-weekdays" aria-hidden="true">
+          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div id="moveCalendarGrid" class="calendar-grid move-calendar-grid"></div>
+        <div class="field">
+          <label for="moveTime">변경 시간</label>
+          <input id="moveTime" type="time" min="09:00" max="22:00" step="1800">
+        </div>
+        <p id="moveMessage" class="message" role="status"></p>
+        <button id="saveMoveButton" class="primary-button" type="button">변경 완료</button>
+      </div>
+    </section>
   </body>
 </html>

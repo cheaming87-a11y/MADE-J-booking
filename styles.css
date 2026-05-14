@@ -191,6 +191,8 @@ h2 {
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
+  width: 100%;
+  min-width: 0;
   gap: 6px;
 }
 
@@ -205,6 +207,7 @@ h2 {
   display: grid;
   align-content: center;
   justify-items: center;
+  min-width: 0;
   min-height: 58px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -212,6 +215,7 @@ h2 {
   color: var(--text);
   cursor: pointer;
   gap: 3px;
+  padding: 0;
 }
 
 .calendar-day strong {
@@ -230,6 +234,17 @@ h2 {
 .calendar-day.today {
   border-color: rgba(0, 122, 255, 0.5);
   box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+.calendar-day.selected {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: #fff;
+}
+
+.calendar-day.selected span {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
 }
 
 .field-row {
@@ -549,6 +564,79 @@ textarea:focus {
   display: none !important;
 }
 
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  align-items: end;
+  padding: 16px;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.modal-sheet {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: min(520px, calc(100vw - 32px));
+  min-width: 0;
+  max-height: min(88vh, 760px);
+  margin: 0 auto;
+  gap: 14px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.modal-heading,
+.move-calendar-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.modal-heading {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.modal-heading > div {
+  min-width: 0;
+}
+
+.modal-heading p {
+  color: var(--subtext);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.modal-heading h2 {
+  overflow-wrap: anywhere;
+}
+
+.move-calendar-header {
+  text-align: center;
+}
+
+.move-calendar-grid .calendar-day {
+  min-height: 46px;
+  border-radius: 14px;
+}
+
+.move-calendar-grid .calendar-day strong {
+  font-size: 15px;
+}
+
 @media (min-width: 820px) {
   .app-shell {
     padding-inline: 24px;
@@ -598,4 +686,15 @@ textarea:focus {
   .customer-stats {
     grid-template-columns: 1fr;
   }
+
+  .modal {
+    padding: 10px;
+  }
+
+  .modal-sheet {
+    width: calc(100vw - 20px);
+    border-radius: 24px 24px 0 0;
+    padding: 16px;
+  }
+
 }

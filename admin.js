@@ -3,6 +3,9 @@ let customers = [];
 let customerBookings = [];
 let services = [];
 let monthCursor = new Date();
+let moveTarget = null;
+let moveCursor = new Date();
+let selectedMoveDate = "";
 
 const screenTitle = document.querySelector("#screenTitle");
 const loginPanel = document.querySelector("#loginPanel");
@@ -37,6 +40,16 @@ const adminMessage = document.querySelector("#adminMessage");
 const customerRows = document.querySelector("#customerRows");
 const customerMessage = document.querySelector("#customerMessage");
 const customerSearch = document.querySelector("#customerSearch");
+const moveDialog = document.querySelector("#moveDialog");
+const moveTitle = document.querySelector("#moveTitle");
+const moveCalendarTitle = document.querySelector("#moveCalendarTitle");
+const moveCalendarGrid = document.querySelector("#moveCalendarGrid");
+const movePrevMonthButton = document.querySelector("#movePrevMonthButton");
+const moveNextMonthButton = document.querySelector("#moveNextMonthButton");
+const moveTime = document.querySelector("#moveTime");
+const moveMessage = document.querySelector("#moveMessage");
+const saveMoveButton = document.querySelector("#saveMoveButton");
+const closeMoveButton = document.querySelector("#closeMoveButton");
 
 const fallbackServices = [
   { id: "fallback-nail", name: "네일" },
@@ -193,6 +206,32 @@ function renderCalendar() {
   }
 }
 
+function renderMoveCalendar() {
+  const year = moveCursor.getFullYear();
+  const month = moveCursor.getMonth();
+  const first = new Date(year, month, 1);
+  const last = new Date(year, month + 1, 0);
+  const today = getToday();
+  moveCalendarTitle.textContent = `${year}년 ${month + 1}월`;
+  moveCalendarGrid.innerHTML = "";
+  for (let index = 0; index < first.getDay(); index += 1) {
+    moveCalendarGrid.appendChild(document.createElement("div"));
+  }
+  for (let day = 1; day <= last.getDate(); day += 1) {
+    const date = new Date(year, month, day);
+    const dateKey = toDateKey(date);
+    const count = bookingsForDate(dateKey).filter((booking) => booking.id !== moveTarget?.id).length;
+    const button = document.createElement("button");
+    button.className = "calendar-day";
+    if (dateKey === today) button.classList.add("today");
+    if (dateKey === selectedMoveDate) button.classList.add("selected");
+    button.type = "button";
+    button.dataset.date = dateKey;
+    button.innerHTML = `<strong>${day}</strong>${count ? `<span>${count}건</span>` : ""}`;
+    moveCalendarGrid.appendChild(button);
+  }
+}
+
 function renderCustomers() {
   const query = customerSearch.value.trim().toLowerCase();
   const visibleCustomers = activeCustomers().filter((customer) => {
@@ -255,7 +294,7 @@ function renderRows(bookings) {
         ${booking.note ? `<div class="booking-note">${escapeHtml(booking.note)}</div>` : ""}
         <div class="booking-actions">
           <button class="mini-button success" type="button" data-action="complete-booking" data-id="${booking.id}">완료</button>
-          <button class="mini-button" type="button" data-action="move-booking" data-id="${booking.id}">예약변경</button>
+          <button class="mini-button" type="button" data-action="move-booking" data-id="${booking.id}" data-date="${booking.booking_date}" data-time="${formatTime(booking.booking_time)}" data-customer="${escapeHtml(booking.customer_name)}">예약변경</button>
           <button class="mini-button danger" type="button" data-action="cancel-booking" data-id="${booking.id}">예약취소</button>
         </div>
       </div>
@@ -421,33 +460,51 @@ async function completeBooking(id) {
   await loadBookings();
 }
 
-async function moveBooking(id) {
+function openMoveDialog(id, currentDate, currentTime, customer) {
+  moveTarget = { id, customer };
+  selectedMoveDate = currentDate || filterDate.value || getToday();
+  moveCursor = new Date(`${selectedMoveDate}T00:00:00`);
+  moveTime.value = currentTime || "10:00";
+  moveTitle.textContent = customer ? `${customer} 예약변경` : "날짜와 시간 선택";
+  setMessage(moveMessage, "캘린더에서 날짜를 누르고 시간을 선택하세요.");
+  moveDialog.classList.remove("hidden");
+  renderMoveCalendar();
+}
+
+function closeMoveDialog() {
+  moveDialog.classList.add("hidden");
+  moveTarget = null;
+  selectedMoveDate = "";
+  setMessage(moveMessage, "");
+}
+
+async function submitMoveBooking() {
   if (!client) return;
-  const current = filterDate.value || getToday();
-  const nextDate = window.prompt("옮길 날짜를 입력하세요. 예: 2026-05-20", current);
-  if (nextDate === null) return;
-  const dateValue = nextDate.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-    setMessage(adminMessage, "날짜 형식은 YYYY-MM-DD로 입력하세요.", "error");
+  if (!moveTarget) return;
+  const dateValue = selectedMoveDate;
+  const timeValue = moveTime.value;
+  if (!dateValue) {
+    setMessage(moveMessage, "변경할 날짜를 선택하세요.", "error");
     return;
   }
-  const nextTime = window.prompt("옮길 시간을 입력하세요. 예: 14:30", "10:00");
-  if (nextTime === null) return;
-  const timeValue = nextTime.trim();
-  if (!/^\d{2}:\d{2}$/.test(timeValue)) {
-    setMessage(adminMessage, "시간 형식은 HH:MM으로 입력하세요.", "error");
+  if (!timeValue) {
+    setMessage(moveMessage, "변경할 시간을 선택하세요.", "error");
     return;
   }
+  saveMoveButton.disabled = true;
+  setMessage(moveMessage, "예약을 옮기는 중입니다.");
   const { error } = await client
     .from("bookings")
     .update({ booking_date: dateValue, booking_time: timeValue })
-    .eq("id", id);
+    .eq("id", moveTarget.id);
+  saveMoveButton.disabled = false;
   if (error) {
-    setMessage(adminMessage, error.code === "23505" ? "옮길 시간에 이미 예약이 있습니다." : "예약변경에 실패했습니다.", "error");
+    setMessage(moveMessage, error.code === "23505" ? "옮길 시간에 이미 예약이 있습니다." : "예약변경에 실패했습니다.", "error");
     return;
   }
   filterDate.value = dateValue;
   bookingDate.value = dateValue;
+  closeMoveDialog();
   await loadCustomers();
   await loadBookings();
 }
@@ -509,6 +566,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     monthCursor = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1);
     renderCalendar();
   });
+  movePrevMonthButton.addEventListener("click", () => {
+    moveCursor = new Date(moveCursor.getFullYear(), moveCursor.getMonth() - 1, 1);
+    renderMoveCalendar();
+  });
+  moveNextMonthButton.addEventListener("click", () => {
+    moveCursor = new Date(moveCursor.getFullYear(), moveCursor.getMonth() + 1, 1);
+    renderMoveCalendar();
+  });
+  moveCalendarGrid.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-date]");
+    if (!button) return;
+    selectedMoveDate = button.dataset.date;
+    moveCursor = new Date(`${selectedMoveDate}T00:00:00`);
+    renderMoveCalendar();
+  });
+  saveMoveButton.addEventListener("click", submitMoveBooking);
+  closeMoveButton.addEventListener("click", closeMoveDialog);
+  moveDialog.addEventListener("click", (event) => {
+    if (event.target.dataset.action === "close-move") closeMoveDialog();
+  });
   calendarGrid.addEventListener("click", (event) => {
     const button = event.target.closest("[data-date]");
     if (button) openDate(button.dataset.date);
@@ -526,7 +603,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const button = event.target.closest("[data-action]");
     if (!button) return;
     if (button.dataset.action === "complete-booking") completeBooking(button.dataset.id);
-    if (button.dataset.action === "move-booking") moveBooking(button.dataset.id);
+    if (button.dataset.action === "move-booking") openMoveDialog(button.dataset.id, button.dataset.date, button.dataset.time, button.dataset.customer);
     if (button.dataset.action === "cancel-booking") cancelBooking(button.dataset.id);
   });
   customerRows.addEventListener("click", (event) => {
