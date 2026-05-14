@@ -41,6 +41,7 @@ function initSupabase() {
 function showAdmin(isAuthed) {
   loginPanel.classList.toggle("hidden", isAuthed);
   adminPanel.classList.toggle("hidden", !isAuthed);
+  logoutButton.classList.toggle("hidden", !isAuthed);
 }
 
 function formatTime(value) {
@@ -60,26 +61,29 @@ function renderRows(bookings) {
   bookingRows.innerHTML = "";
 
   if (!bookings.length) {
-    const row = document.createElement("tr");
-    row.innerHTML = `<td colspan="6">예약이 없습니다.</td>`;
-    bookingRows.appendChild(row);
+    bookingRows.innerHTML = `<div class="empty-state">이 날짜에는 예약이 없습니다.</div>`;
     return;
   }
 
   bookings.forEach((booking) => {
-    const row = document.createElement("tr");
     const isCancelled = booking.status === "cancelled";
+    const card = document.createElement("article");
+    card.className = "booking-card";
 
-    row.innerHTML = `
-      <td>${formatTime(booking.booking_time)}</td>
-      <td>${escapeHtml(booking.customer_name)}</td>
-      <td>${escapeHtml(booking.phone || "")}</td>
-      <td>${escapeHtml(booking.note || "")}</td>
-      <td><span class="status ${isCancelled ? "cancelled" : ""}">${isCancelled ? "취소" : "확정"}</span></td>
-      <td>${isCancelled ? "" : `<button class="link-button" type="button" data-id="${booking.id}">취소</button>`}</td>
+    card.innerHTML = `
+      <div class="booking-time">${formatTime(booking.booking_time)}</div>
+      <div class="booking-main">
+        <div class="booking-top">
+          <div class="booking-name">${escapeHtml(booking.customer_name)}</div>
+          <span class="status ${isCancelled ? "cancelled" : ""}">${isCancelled ? "취소" : "확정"}</span>
+        </div>
+        ${booking.phone ? `<div class="booking-phone">${escapeHtml(booking.phone)}</div>` : ""}
+        ${booking.note ? `<div class="booking-note">${escapeHtml(booking.note)}</div>` : ""}
+        ${isCancelled ? "" : `<button class="link-button" type="button" data-id="${booking.id}">예약 취소</button>`}
+      </div>
     `;
 
-    bookingRows.appendChild(row);
+    bookingRows.appendChild(card);
   });
 }
 
@@ -100,7 +104,7 @@ async function loadBookings() {
   }
 
   renderRows(data || []);
-  setMessage(adminMessage, `${data.length}건의 예약을 표시했습니다.`, "success");
+  setMessage(adminMessage, `${data.length}건의 예약`, "success");
 }
 
 async function saveBooking(event) {
@@ -124,7 +128,7 @@ async function saveBooking(event) {
 
   if (error) {
     if (error.code === "23505") {
-      setMessage(formMessage, "이미 같은 날짜와 시간에 예약이 있습니다.", "error");
+      setMessage(formMessage, "같은 시간에 이미 예약이 있습니다.", "error");
       return;
     }
 
@@ -145,8 +149,6 @@ async function insertBooking(payload) {
     return result;
   }
 
-  // Older installs allowed only anon inserts. Keep saving functional until the
-  // owner-only RLS migration is applied in Supabase.
   const config = window.MADE_J_SUPABASE;
   const publicClient = window.supabase.createClient(config.url, config.anonKey, {
     auth: { persistSession: false, autoRefreshToken: false }
@@ -169,7 +171,7 @@ async function login() {
   loginButton.disabled = false;
 
   if (error) {
-    setMessage(loginMessage, "로그인에 실패했습니다.", "error");
+    setMessage(loginMessage, "이메일 또는 비밀번호를 확인하세요.", "error");
     return;
   }
 
@@ -183,7 +185,7 @@ async function logout() {
   await client.auth.signOut();
   showAdmin(false);
   bookingRows.innerHTML = "";
-  setMessage(adminMessage, "");
+  setMessage(adminMessage, "예약 목록을 불러오세요.");
 }
 
 async function cancelBooking(id) {
