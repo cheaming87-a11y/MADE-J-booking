@@ -1,4 +1,6 @@
 let client = null;
+let customers = [];
+let services = [];
 
 const loginPanel = document.querySelector("#loginPanel");
 const adminPanel = document.querySelector("#adminPanel");
@@ -10,12 +12,26 @@ const loginMessage = document.querySelector("#loginMessage");
 const bookingForm = document.querySelector("#ownerBookingForm");
 const bookingDate = document.querySelector("#bookingDate");
 const bookingTime = document.querySelector("#bookingTime");
+const customerPicker = document.querySelector("#customerPicker");
+const customerName = document.querySelector("#customerName");
+const phone = document.querySelector("#phone");
+const servicePicker = document.querySelector("#servicePicker");
+const durationPreview = document.querySelector("#durationPreview");
 const saveBookingButton = document.querySelector("#saveBookingButton");
 const formMessage = document.querySelector("#formMessage");
 const filterDate = document.querySelector("#filterDate");
 const refreshButton = document.querySelector("#refreshButton");
 const bookingRows = document.querySelector("#bookingRows");
 const adminMessage = document.querySelector("#adminMessage");
+const customerRows = document.querySelector("#customerRows");
+const customerMessage = document.querySelector("#customerMessage");
+
+const fallbackServices = [
+  { id: "fallback-consult", name: "상담", duration_minutes: 30 },
+  { id: "fallback-basic", name: "기본 시술", duration_minutes: 60 },
+  { id: "fallback-premium", name: "프리미엄 시술", duration_minutes: 90 },
+  { id: "fallback-care", name: "관리", duration_minutes: 120 }
+];
 
 function setMessage(element, text, type = "") {
   element.textContent = text;
@@ -45,7 +61,15 @@ function showAdmin(isAuthed) {
 }
 
 function formatTime(value) {
-  return String(value).slice(0, 5);
+  return String(value || "").slice(0, 5);
+}
+
+function addMinutes(timeValue, minutes) {
+  const [hours, mins] = timeValue.split(":").map(Number);
+  const total = hours * 60 + mins + Number(minutes || 0);
+  const nextHours = Math.floor(total / 60) % 24;
+  const nextMins = total % 60;
+  return `${String(nextHours).padStart(2, "0")}:${String(nextMins).padStart(2, "0")}`;
 }
 
 function escapeHtml(value) {
@@ -55,6 +79,61 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function selectedService() {
+  return services.find((service) => service.id === servicePicker.value) || services[0] || fallbackServices[0];
+}
+
+function updateDurationPreview() {
+  const service = selectedService();
+  if (!service || !bookingTime.value) {
+    durationPreview.textContent = "시술을 선택하면 종료 시간이 표시됩니다.";
+    return;
+  }
+
+  const endTime = addMinutes(bookingTime.value, service.duration_minutes);
+  durationPreview.textContent = `${service.name} · ${service.duration_minutes}분 · ${bookingTime.value} - ${endTime}`;
+}
+
+function renderServiceOptions() {
+  const source = services.length ? services : fallbackServices;
+  servicePicker.innerHTML = source
+    .map((service) => `<option value="${service.id}">${escapeHtml(service.name)} · ${service.duration_minutes}분</option>`)
+    .join("");
+  updateDurationPreview();
+}
+
+function renderCustomerOptions() {
+  const options = customers
+    .map((customer) => {
+      const label = customer.phone ? `${customer.name} · ${customer.phone}` : customer.name;
+      return `<option value="${customer.id}">${escapeHtml(label)}</option>`;
+    })
+    .join("");
+
+  customerPicker.innerHTML = `<option value="">신규 고객으로 등록</option>${options}`;
+}
+
+function renderCustomers() {
+  if (!customers.length) {
+    customerRows.innerHTML = `<div class="empty-state">저장된 고객이 없습니다.</div>`;
+    setMessage(customerMessage, "예약 등록 시 고객 정보가 자동 저장됩니다.");
+    return;
+  }
+
+  customerRows.innerHTML = customers
+    .slice(0, 20)
+    .map((customer) => `
+      <div class="compact-item">
+        <div>
+          <strong>${escapeHtml(customer.name)}</strong>
+          <span>${escapeHtml(customer.phone || "연락처 없음")}</span>
+        </div>
+      </div>
+    `)
+    .join("");
+  setMessage(customerMessage, `${customers.length}명의 고객이 저장되어 있습니다.`, "success");
 }
 
 function renderRows(bookings) {
@@ -67,16 +146,22 @@ function renderRows(bookings) {
 
   bookings.forEach((booking) => {
     const isCancelled = booking.status === "cancelled";
+    const serviceText = booking.service_name || "시술 미지정";
+    const endTime = booking.end_time ? formatTime(booking.end_time) : addMinutes(formatTime(booking.booking_time), booking.duration_minutes || 60);
     const card = document.createElement("article");
     card.className = "booking-card";
 
     card.innerHTML = `
-      <div class="booking-time">${formatTime(booking.booking_time)}</div>
+      <div class="booking-time">
+        <span>${formatTime(booking.booking_time)}</span>
+        <small>${endTime}</small>
+      </div>
       <div class="booking-main">
         <div class="booking-top">
           <div class="booking-name">${escapeHtml(booking.customer_name)}</div>
           <span class="status ${isCancelled ? "cancelled" : ""}">${isCancelled ? "취소" : "확정"}</span>
         </div>
+        <div class="booking-service">${escapeHtml(serviceText)} · ${booking.duration_minutes || 60}분</div>
         ${booking.phone ? `<div class="booking-phone">${escapeHtml(booking.phone)}</div>` : ""}
         ${booking.note ? `<div class="booking-note">${escapeHtml(booking.note)}</div>` : ""}
         ${isCancelled ? "" : `<button class="link-button" type="button" data-id="${booking.id}">예약 취소</button>`}
@@ -85,6 +170,28 @@ function renderRows(bookings) {
 
     bookingRows.appendChild(card);
   });
+}
+
+async function loadServices() {
+  const { data, error } = await client
+    .from("services")
+    .select("*")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  services = error ? fallbackServices : data || fallbackServices;
+  renderServiceOptions();
+}
+
+async function loadCustomers() {
+  const { data, error } = await client
+    .from("customers")
+    .select("*")
+    .order("updated_at", { ascending: false });
+
+  customers = error ? [] : data || [];
+  renderCustomerOptions();
+  renderCustomers();
 }
 
 async function loadBookings() {
@@ -107,6 +214,40 @@ async function loadBookings() {
   setMessage(adminMessage, `${data.length}건의 예약`, "success");
 }
 
+async function upsertCustomer() {
+  const pickedId = customerPicker.value;
+  if (pickedId) {
+    return customers.find((customer) => customer.id === pickedId) || null;
+  }
+
+  const name = customerName.value.trim();
+  const phoneValue = phone.value.trim();
+  if (!name) return null;
+
+  const existing = phoneValue
+    ? customers.find((customer) => customer.phone === phoneValue)
+    : customers.find((customer) => customer.name === name && !customer.phone);
+
+  if (existing) {
+    const { data } = await client
+      .from("customers")
+      .update({ name, phone: phoneValue || null, updated_at: new Date().toISOString() })
+      .eq("id", existing.id)
+      .select()
+      .single();
+    return data || existing;
+  }
+
+  const { data, error } = await client
+    .from("customers")
+    .insert({ name, phone: phoneValue || null })
+    .select()
+    .single();
+
+  if (error) return null;
+  return data;
+}
+
 async function saveBooking(event) {
   event.preventDefault();
   if (!client) return;
@@ -114,11 +255,21 @@ async function saveBooking(event) {
   saveBookingButton.disabled = true;
   setMessage(formMessage, "예약을 저장하는 중입니다.");
 
+  const customer = await upsertCustomer();
+  const service = selectedService();
+  const duration = service.duration_minutes || 60;
+  const endTime = addMinutes(bookingTime.value, duration);
+
   const payload = {
     booking_date: bookingDate.value,
     booking_time: bookingTime.value,
-    customer_name: bookingForm.customerName.value.trim(),
-    phone: bookingForm.phone.value.trim() || "",
+    end_time: endTime,
+    customer_id: customer?.id || null,
+    service_id: service.id?.startsWith("fallback-") ? null : service.id,
+    service_name: service.name,
+    duration_minutes: duration,
+    customer_name: customerName.value.trim(),
+    phone: phone.value.trim() || "",
     note: bookingForm.note.value.trim() || null,
     status: "confirmed"
   };
@@ -128,7 +279,7 @@ async function saveBooking(event) {
 
   if (error) {
     if (error.code === "23505") {
-      setMessage(formMessage, "같은 시간에 이미 예약이 있습니다.", "error");
+      setMessage(formMessage, "같은 시작 시간에 이미 예약이 있습니다.", "error");
       return;
     }
 
@@ -137,9 +288,12 @@ async function saveBooking(event) {
   }
 
   bookingForm.reset();
+  customerPicker.value = "";
   bookingDate.value = filterDate.value;
   bookingTime.value = "10:00";
+  renderServiceOptions();
   setMessage(formMessage, "예약을 저장했습니다.", "success");
+  await loadCustomers();
   await loadBookings();
 }
 
@@ -177,6 +331,7 @@ async function login() {
 
   setMessage(loginMessage, "");
   showAdmin(true);
+  await Promise.all([loadServices(), loadCustomers()]);
   await loadBookings();
 }
 
@@ -185,6 +340,7 @@ async function logout() {
   await client.auth.signOut();
   showAdmin(false);
   bookingRows.innerHTML = "";
+  customerRows.innerHTML = "";
   setMessage(adminMessage, "예약 목록을 불러오세요.");
 }
 
@@ -210,6 +366,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   bookingDate.value = today;
   bookingTime.value = "10:00";
   client = initSupabase();
+  renderServiceOptions();
 
   loginButton.addEventListener("click", login);
   logoutButton.addEventListener("click", logout);
@@ -222,6 +379,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     bookingDate.value = filterDate.value;
     loadBookings();
   });
+  bookingTime.addEventListener("change", updateDurationPreview);
+  servicePicker.addEventListener("change", updateDurationPreview);
+  customerPicker.addEventListener("change", () => {
+    const customer = customers.find((item) => item.id === customerPicker.value);
+    if (!customer) return;
+    customerName.value = customer.name;
+    phone.value = customer.phone || "";
+  });
   bookingRows.addEventListener("click", (event) => {
     const button = event.target.closest("[data-id]");
     if (button) cancelBooking(button.dataset.id);
@@ -231,5 +396,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const { data } = await client.auth.getSession();
   showAdmin(Boolean(data.session));
-  if (data.session) await loadBookings();
+  if (data.session) {
+    await Promise.all([loadServices(), loadCustomers()]);
+    await loadBookings();
+  }
 });

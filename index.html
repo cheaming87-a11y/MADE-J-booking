@@ -25,7 +25,7 @@
       <section id="loginPanel" class="auth-card">
         <div class="auth-intro">
           <h2>원장님 로그인</h2>
-          <p>예약 등록과 일정 확인은 로그인 후 사용할 수 있습니다.</p>
+          <p>예약, 고객, 시술 정보를 관리합니다.</p>
         </div>
         <div class="field">
           <label for="adminEmail">이메일</label>
@@ -49,7 +49,7 @@
         <section class="sheet">
           <div class="section-title">
             <h2>예약 등록</h2>
-            <p>같은 날짜와 시간은 중복 저장되지 않습니다.</p>
+            <p id="durationPreview">시술을 선택하면 종료 시간이 표시됩니다.</p>
           </div>
           <form id="ownerBookingForm" autocomplete="on">
             <div class="field-row">
@@ -58,22 +58,39 @@
                 <input id="bookingDate" name="bookingDate" type="date" required>
               </div>
               <div class="field">
-                <label for="bookingTime">시간</label>
+                <label for="bookingTime">시작 시간</label>
                 <input id="bookingTime" name="bookingTime" type="time" min="09:00" max="22:00" step="1800" required>
               </div>
             </div>
+
             <div class="field">
-              <label for="customerName">고객명</label>
-              <input id="customerName" name="customerName" type="text" placeholder="고객 이름" required>
+              <label for="customerPicker">기존 고객</label>
+              <select id="customerPicker" name="customerPicker">
+                <option value="">신규 고객으로 등록</option>
+              </select>
             </div>
+
+            <div class="field-row">
+              <div class="field">
+                <label for="customerName">고객명</label>
+                <input id="customerName" name="customerName" type="text" placeholder="고객 이름" required>
+              </div>
+              <div class="field">
+                <label for="phone">연락처</label>
+                <input id="phone" name="phone" type="tel" placeholder="010-0000-0000" inputmode="tel">
+              </div>
+            </div>
+
             <div class="field">
-              <label for="phone">연락처</label>
-              <input id="phone" name="phone" type="tel" placeholder="010-0000-0000" inputmode="tel">
+              <label for="servicePicker">시술 종류</label>
+              <select id="servicePicker" name="servicePicker" required></select>
             </div>
+
             <div class="field">
               <label for="note">메모</label>
               <textarea id="note" name="note" rows="3" placeholder="시술 내용, 특이사항, 결제 메모"></textarea>
             </div>
+
             <button id="saveBookingButton" class="primary-button" type="submit">예약 저장</button>
             <p id="formMessage" class="message" role="status"></p>
           </form>
@@ -81,10 +98,18 @@
 
         <section class="sheet">
           <div class="section-title">
-            <h2>오늘의 예약</h2>
+            <h2>예약 목록</h2>
             <p id="adminMessage" role="status">예약 목록을 불러오세요.</p>
           </div>
           <div id="bookingRows" class="booking-list"></div>
+        </section>
+
+        <section class="sheet">
+          <div class="section-title">
+            <h2>고객 DB</h2>
+            <p id="customerMessage" role="status">예약 등록 시 고객 정보가 자동 저장됩니다.</p>
+          </div>
+          <div id="customerRows" class="compact-list"></div>
         </section>
       </section>
     </main>
