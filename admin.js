@@ -6,6 +6,9 @@ let monthCursor = new Date();
 let moveTarget = null;
 let moveCursor = new Date();
 let selectedMoveDate = "";
+let editCustomerTarget = null;
+let calendarTouchStart = null;
+let calendarSwipeLock = false;
 
 const screenTitle = document.querySelector("#screenTitle");
 const loginPanel = document.querySelector("#loginPanel");
@@ -22,8 +25,9 @@ const bookingView = document.querySelector("#bookingView");
 const customerView = document.querySelector("#customerView");
 const calendarTitle = document.querySelector("#calendarTitle");
 const calendarGrid = document.querySelector("#calendarGrid");
-const prevMonthButton = document.querySelector("#prevMonthButton");
-const nextMonthButton = document.querySelector("#nextMonthButton");
+const totalCompletedCount = document.querySelector("#totalCompletedCount");
+const monthCompletedCount = document.querySelector("#monthCompletedCount");
+const activeBookingCount = document.querySelector("#activeBookingCount");
 const backToCalendarButton = document.querySelector("#backToCalendarButton");
 const bookingForm = document.querySelector("#ownerBookingForm");
 const bookingDate = document.querySelector("#bookingDate");
@@ -50,6 +54,13 @@ const moveTime = document.querySelector("#moveTime");
 const moveMessage = document.querySelector("#moveMessage");
 const saveMoveButton = document.querySelector("#saveMoveButton");
 const closeMoveButton = document.querySelector("#closeMoveButton");
+const customerDialog = document.querySelector("#customerDialog");
+const customerEditTitle = document.querySelector("#customerEditTitle");
+const editCustomerName = document.querySelector("#editCustomerName");
+const editCustomerPhone = document.querySelector("#editCustomerPhone");
+const customerEditMessage = document.querySelector("#customerEditMessage");
+const saveCustomerButton = document.querySelector("#saveCustomerButton");
+const closeCustomerButton = document.querySelector("#closeCustomerButton");
 
 const fallbackServices = [
   { id: "fallback-nail", name: "네일" },
@@ -181,6 +192,18 @@ function bookingsForDate(dateKey) {
   return customerBookings.filter((booking) => booking.booking_date === dateKey && booking.status === "confirmed");
 }
 
+function renderDashboard() {
+  const year = monthCursor.getFullYear();
+  const month = String(monthCursor.getMonth() + 1).padStart(2, "0");
+  const monthPrefix = `${year}-${month}`;
+  const monthlyBookings = customerBookings.filter((booking) => String(booking.booking_date || "").startsWith(monthPrefix));
+  const monthlyCompleted = monthlyBookings.filter((booking) => booking.status === "completed");
+  const monthlyActive = monthlyBookings.filter((booking) => booking.status === "confirmed");
+  totalCompletedCount.textContent = `${monthlyBookings.length}건`;
+  monthCompletedCount.textContent = `${monthlyCompleted.length}건`;
+  activeBookingCount.textContent = `${monthlyActive.length}건`;
+}
+
 function renderCalendar() {
   const year = monthCursor.getFullYear();
   const month = monthCursor.getMonth();
@@ -204,6 +227,31 @@ function renderCalendar() {
     button.innerHTML = `<strong>${day}</strong>${count ? `<span>${count}건</span>` : ""}`;
     calendarGrid.appendChild(button);
   }
+  renderDashboard();
+}
+
+function moveMainMonth(offset) {
+  monthCursor = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + offset, 1);
+  renderCalendar();
+}
+
+function handleCalendarTouchStart(event) {
+  const touch = event.changedTouches[0];
+  calendarTouchStart = { x: touch.clientX, y: touch.clientY };
+}
+
+function handleCalendarTouchEnd(event) {
+  if (!calendarTouchStart) return;
+  const touch = event.changedTouches[0];
+  const diffX = touch.clientX - calendarTouchStart.x;
+  const diffY = touch.clientY - calendarTouchStart.y;
+  calendarTouchStart = null;
+  if (Math.abs(diffX) < 55 || Math.abs(diffX) < Math.abs(diffY) * 1.4) return;
+  calendarSwipeLock = true;
+  moveMainMonth(diffX > 0 ? -1 : 1);
+  window.setTimeout(() => {
+    calendarSwipeLock = false;
+  }, 250);
 }
 
 function renderMoveCalendar() {
@@ -402,21 +450,46 @@ async function saveBooking(event) {
   await loadBookings();
 }
 
-async function editCustomer(id) {
+function openCustomerDialog(id) {
   const customer = customers.find((item) => item.id === id);
   if (!customer) return;
-  const nextName = window.prompt("고객명", customer.name);
-  if (nextName === null) return;
-  const nextPhone = window.prompt("연락처", customer.phone || "");
-  if (nextPhone === null) return;
-  const { error } = await client
-    .from("customers")
-    .update({ name: nextName.trim(), phone: nextPhone.trim() || null, updated_at: new Date().toISOString() })
-    .eq("id", id);
-  if (error) {
-    setMessage(customerMessage, "고객 수정에 실패했습니다.", "error");
+  editCustomerTarget = customer;
+  customerEditTitle.textContent = `${customer.name} 수정`;
+  editCustomerName.value = customer.name || "";
+  editCustomerPhone.value = customer.phone || "";
+  setMessage(customerEditMessage, "고객명과 연락처를 수정하세요.");
+  customerDialog.classList.remove("hidden");
+  editCustomerName.focus();
+}
+
+function closeCustomerDialog() {
+  customerDialog.classList.add("hidden");
+  editCustomerTarget = null;
+  editCustomerName.value = "";
+  editCustomerPhone.value = "";
+  setMessage(customerEditMessage, "");
+}
+
+async function submitCustomerEdit() {
+  if (!client || !editCustomerTarget) return;
+  const nextName = editCustomerName.value.trim();
+  const nextPhone = editCustomerPhone.value.trim();
+  if (!nextName) {
+    setMessage(customerEditMessage, "고객명을 입력하세요.", "error");
     return;
   }
+  saveCustomerButton.disabled = true;
+  setMessage(customerEditMessage, "고객 정보를 저장하는 중입니다.");
+  const { error } = await client
+    .from("customers")
+    .update({ name: nextName, phone: nextPhone || null, updated_at: new Date().toISOString() })
+    .eq("id", editCustomerTarget.id);
+  saveCustomerButton.disabled = false;
+  if (error) {
+    setMessage(customerEditMessage, "고객 수정에 실패했습니다.", "error");
+    return;
+  }
+  closeCustomerDialog();
   await loadCustomers();
   await loadBookings();
 }
@@ -558,14 +631,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   calendarTabButton.addEventListener("click", () => showView("calendar"));
   customerTabButton.addEventListener("click", () => showView("customers"));
   backToCalendarButton.addEventListener("click", () => showView("calendar"));
-  prevMonthButton.addEventListener("click", () => {
-    monthCursor = new Date(monthCursor.getFullYear(), monthCursor.getMonth() - 1, 1);
-    renderCalendar();
-  });
-  nextMonthButton.addEventListener("click", () => {
-    monthCursor = new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1);
-    renderCalendar();
-  });
+  calendarView.addEventListener("touchstart", handleCalendarTouchStart, { passive: true });
+  calendarView.addEventListener("touchend", handleCalendarTouchEnd, { passive: true });
   movePrevMonthButton.addEventListener("click", () => {
     moveCursor = new Date(moveCursor.getFullYear(), moveCursor.getMonth() - 1, 1);
     renderMoveCalendar();
@@ -586,7 +653,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   moveDialog.addEventListener("click", (event) => {
     if (event.target.dataset.action === "close-move") closeMoveDialog();
   });
+  saveCustomerButton.addEventListener("click", submitCustomerEdit);
+  closeCustomerButton.addEventListener("click", closeCustomerDialog);
+  customerDialog.addEventListener("click", (event) => {
+    if (event.target.dataset.action === "close-customer") closeCustomerDialog();
+  });
+  editCustomerPhone.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") submitCustomerEdit();
+  });
   calendarGrid.addEventListener("click", (event) => {
+    if (calendarSwipeLock) return;
     const button = event.target.closest("[data-date]");
     if (button) openDate(button.dataset.date);
   });
@@ -609,7 +685,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   customerRows.addEventListener("click", (event) => {
     const button = event.target.closest("[data-action]");
     if (!button) return;
-    if (button.dataset.action === "edit-customer") editCustomer(button.dataset.id);
+    if (button.dataset.action === "edit-customer") openCustomerDialog(button.dataset.id);
     if (button.dataset.action === "delete-customer") deleteCustomer(button.dataset.id);
   });
   customerSearch.addEventListener("input", renderCustomers);

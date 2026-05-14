@@ -181,7 +181,7 @@ h2 {
 
 .calendar-header {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   align-items: center;
   text-align: center;
@@ -216,6 +216,7 @@ h2 {
   cursor: pointer;
   gap: 3px;
   padding: 0;
+  touch-action: manipulation;
 }
 
 .calendar-day strong {
@@ -234,6 +235,39 @@ h2 {
 .calendar-day.today {
   border-color: rgba(0, 122, 255, 0.5);
   box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+.dashboard-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dashboard-strip div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--sheet-solid);
+  padding: 13px 10px;
+  text-align: center;
+}
+
+.dashboard-strip span {
+  overflow: hidden;
+  color: var(--subtext);
+  font-size: 12px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-strip strong {
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 850;
+  letter-spacing: 0;
 }
 
 .calendar-day.selected {
@@ -598,6 +632,14 @@ textarea:focus {
   padding: 18px;
 }
 
+.compact-modal {
+  gap: 10px;
+}
+
+.compact-modal .field {
+  margin-bottom: 4px;
+}
+
 .modal-heading,
 .move-calendar-header {
   display: grid;
@@ -684,6 +726,10 @@ textarea:focus {
   }
 
   .customer-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-strip {
     grid-template-columns: 1fr;
   }
 

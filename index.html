@@ -7,10 +7,10 @@
     <meta name="apple-mobile-web-app-title" content="MADE J">
     <meta name="theme-color" content="#f5f5f7">
     <title>MADE J Booking</title>
-    <link rel="stylesheet" href="styles.css?v=20260514-9">
+    <link rel="stylesheet" href="styles.css?v=20260514-10">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script defer src="supabase-config.js"></script>
-    <script defer src="admin.js?v=20260514-9"></script>
+    <script defer src="admin.js?v=20260514-10"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -48,17 +48,29 @@
         <section id="calendarView" class="view-stack">
           <section class="sheet">
             <div class="calendar-header">
-              <button id="prevMonthButton" class="text-button" type="button">이전</button>
               <div>
                 <h2 id="calendarTitle">월별 캘린더</h2>
-                <p id="calendarMessage">날짜를 선택하면 예약 화면으로 이동합니다.</p>
+                <p id="calendarMessage">날짜 선택 · 좌우 스와이프로 월 이동</p>
               </div>
-              <button id="nextMonthButton" class="text-button" type="button">다음</button>
             </div>
             <div class="calendar-weekdays" aria-hidden="true">
               <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
             </div>
             <div id="calendarGrid" class="calendar-grid"></div>
+          </section>
+          <section class="dashboard-strip" aria-label="예약 대시보드">
+            <div>
+              <span>월 전체</span>
+              <strong id="totalCompletedCount">0건</strong>
+            </div>
+            <div>
+              <span>월 완료</span>
+              <strong id="monthCompletedCount">0건</strong>
+            </div>
+            <div>
+              <span>월 예정</span>
+              <strong id="activeBookingCount">0건</strong>
+            </div>
           </section>
         </section>
 
@@ -164,6 +176,28 @@
         </div>
         <p id="moveMessage" class="message" role="status"></p>
         <button id="saveMoveButton" class="primary-button" type="button">변경 완료</button>
+      </div>
+    </section>
+    <section id="customerDialog" class="modal hidden" aria-label="고객 수정">
+      <div class="modal-backdrop" data-action="close-customer"></div>
+      <div class="modal-sheet compact-modal" role="dialog" aria-modal="true">
+        <div class="modal-heading">
+          <div>
+            <p>고객 DB</p>
+            <h2 id="customerEditTitle">고객 수정</h2>
+          </div>
+          <button id="closeCustomerButton" class="text-button" type="button">닫기</button>
+        </div>
+        <div class="field">
+          <label for="editCustomerName">고객명</label>
+          <input id="editCustomerName" type="text" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="editCustomerPhone">연락처</label>
+          <input id="editCustomerPhone" type="tel" inputmode="tel" autocomplete="tel">
+        </div>
+        <p id="customerEditMessage" class="message" role="status"></p>
+        <button id="saveCustomerButton" class="primary-button" type="button">수정 완료</button>
       </div>
     </section>
   </body>
