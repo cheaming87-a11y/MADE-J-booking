@@ -22,10 +22,11 @@ create table if not exists public.services (
 
 insert into public.services (name, duration_minutes, sort_order)
 values
-  ('상담', 30, 10),
-  ('기본 시술', 60, 20),
-  ('프리미엄 시술', 90, 30),
-  ('관리', 120, 40)
+  ('네일', 120, 10),
+  ('패디', 60, 20),
+  ('네일+패디', 180, 30),
+  ('보수', 30, 40),
+  ('제거', 30, 50)
 on conflict (name) do nothing;
 
 alter table public.bookings

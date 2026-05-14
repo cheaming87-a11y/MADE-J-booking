@@ -27,10 +27,11 @@ const customerRows = document.querySelector("#customerRows");
 const customerMessage = document.querySelector("#customerMessage");
 
 const fallbackServices = [
-  { id: "fallback-consult", name: "상담", duration_minutes: 30 },
-  { id: "fallback-basic", name: "기본 시술", duration_minutes: 60 },
-  { id: "fallback-premium", name: "프리미엄 시술", duration_minutes: 90 },
-  { id: "fallback-care", name: "관리", duration_minutes: 120 }
+  { id: "fallback-nail", name: "네일", duration_minutes: 120 },
+  { id: "fallback-pedi", name: "패디", duration_minutes: 60 },
+  { id: "fallback-nail-pedi", name: "네일+패디", duration_minutes: 180 },
+  { id: "fallback-repair", name: "보수", duration_minutes: 30 },
+  { id: "fallback-removal", name: "제거", duration_minutes: 30 }
 ];
 
 function setMessage(element, text, type = "") {
