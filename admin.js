@@ -159,8 +159,13 @@ function customerMatchesBooking(customer, booking) {
   return Boolean(samePhone || sameName);
 }
 
+function customerForBooking(booking) {
+  return customers.find((customer) => customerMatchesBooking(customer, booking));
+}
+
 function customerStats(customer) {
   const today = getToday();
+  const matchingBookings = customerBookings.filter((booking) => customerMatchesBooking(customer, booking));
   const dates = customerBookings
     .filter((booking) => customerMatchesBooking(customer, booking) && booking.status !== "no_show")
     .map((booking) => booking.booking_date)
@@ -168,9 +173,11 @@ function customerStats(customer) {
     .sort();
   const uniqueDates = [...new Set(dates)];
   const visitCount = uniqueDates.length;
+  const noShowCount = matchingBookings.filter((booking) => booking.status === "no_show").length;
+  const cancelCount = Number(customer.cancel_count || 0);
   const recentVisit = visitCount ? uniqueDates[visitCount - 1] : "없음";
   if (uniqueDates.length < 2) {
-    return { visitCount, recentVisit, cycleText: "계산 전" };
+    return { visitCount, noShowCount, cancelCount, recentVisit, cycleText: "계산 전" };
   }
   const intervals = [];
   for (let index = 1; index < uniqueDates.length; index += 1) {
@@ -178,12 +185,12 @@ function customerStats(customer) {
     if (gap >= 0) intervals.push(gap);
   }
   const average = intervals.reduce((sum, gap) => sum + gap, 0) / intervals.length;
-  return { visitCount, recentVisit, cycleText: `${Math.round(average)}일` };
+  return { visitCount, noShowCount, cancelCount, recentVisit, cycleText: `${Math.round(average)}일` };
 }
 
 function statsForBooking(booking) {
-  const customer = customers.find((item) => customerMatchesBooking(item, booking));
-  if (!customer) return { recentVisit: "없음", cycleText: "계산 전" };
+  const customer = customerForBooking(booking);
+  if (!customer) return { visitCount: 0, noShowCount: 0, cancelCount: 0, recentVisit: "없음", cycleText: "계산 전" };
   const datesBefore = customerBookings
     .filter((item) => customerMatchesBooking(customer, item) && item.status !== "no_show")
     .map((item) => item.booking_date)
@@ -331,6 +338,8 @@ function renderCustomers() {
           </div>
           <div class="customer-stats">
             <span>방문 ${stats.visitCount}회</span>
+            <span>노쇼 ${stats.noShowCount}회</span>
+            <span>취소 ${stats.cancelCount}회</span>
             <span>최근 ${escapeHtml(stats.recentVisit)}</span>
             <span>주기 ${escapeHtml(stats.cycleText)}</span>
           </div>
@@ -367,6 +376,7 @@ function renderRows(bookings) {
         <div class="booking-service">${escapeHtml(serviceName)}</div>
         ${booking.phone ? `<div class="booking-phone">${escapeHtml(booking.phone)}</div>` : ""}
         <div class="booking-service">마지막 방문 ${escapeHtml(stats.recentVisit)} · 재방문주기 ${escapeHtml(stats.cycleText)}</div>
+        <div class="booking-service">방문 ${stats.visitCount}회 · 노쇼 ${stats.noShowCount}회 · 취소 ${stats.cancelCount}회</div>
         ${booking.note ? `<div class="booking-note">${escapeHtml(booking.note)}</div>` : ""}
         <div class="booking-actions">
           <button class="mini-button success" type="button" data-action="complete-booking" data-id="${booking.id}">완료</button>
@@ -542,6 +552,14 @@ async function deleteCustomer(id) {
 async function cancelBooking(id) {
   if (!client) return;
   if (!window.confirm("예약을 취소할까요? 취소한 예약은 목록에서 삭제됩니다.")) return;
+  const { data: booking } = await client.from("bookings").select("*").eq("id", id).single();
+  const customer = booking ? customerForBooking(booking) : null;
+  if (customer && Object.prototype.hasOwnProperty.call(customer, "cancel_count")) {
+    await client
+      .from("customers")
+      .update({ cancel_count: Number(customer.cancel_count || 0) + 1, updated_at: new Date().toISOString() })
+      .eq("id", customer.id);
+  }
   const { error } = await client.from("bookings").delete().eq("id", id);
   if (error) {
     setMessage(adminMessage, "예약취소에 실패했습니다. DB 권한 업데이트가 필요할 수 있습니다.", "error");

@@ -19,6 +19,7 @@ create table if not exists public.customers (
   name text not null,
   phone text,
   memo text,
+  cancel_count integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
