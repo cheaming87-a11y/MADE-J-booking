@@ -182,7 +182,9 @@ function renderBookingCustomerLookup() {
     newBookingCustomerButton.classList.add("hidden");
     return;
   }
-  bookingCustomerMessage.textContent = matches.length ? "기존 고객을 선택하세요." : "일치하는 고객이 없습니다.";
+  bookingCustomerMessage.textContent = matches.length
+    ? "동명이인일 수 있습니다. 전화번호를 확인하고 선택하거나 신규로 등록하세요."
+    : "일치하는 고객이 없습니다. 신규 고객으로 등록하세요.";
   bookingCustomerResults.innerHTML = matches
     .map((customer) => `
       <button class="lookup-result" type="button" data-action="select-booking-customer" data-id="${customer.id}">
@@ -191,7 +193,7 @@ function renderBookingCustomerLookup() {
       </button>
     `)
     .join("");
-  newBookingCustomerButton.classList.toggle("hidden", matches.length > 0);
+  newBookingCustomerButton.classList.remove("hidden");
 }
 
 function selectBookingCustomer(id) {
@@ -228,8 +230,7 @@ function renderServiceOptions() {
 function customerMatchesBooking(customer, booking) {
   if (booking.customer_id && booking.customer_id === customer.id) return true;
   const samePhone = customer.phone && booking.phone && customer.phone === booking.phone;
-  const sameName = customer.name && booking.customer_name && customer.name === booking.customer_name;
-  return Boolean(samePhone || sameName);
+  return Boolean(samePhone);
 }
 
 function customerForBooking(booking) {
@@ -517,8 +518,7 @@ async function upsertCustomer() {
   if (bookingCustomerMode !== "new") return null;
   const existing = customers.find((customer) => {
     const samePhone = phoneValue && customer.phone === phoneValue;
-    const sameName = customer.name === name;
-    return samePhone || sameName;
+    return samePhone;
   });
   if (existing) {
     const { data } = await client
