@@ -7,10 +7,10 @@
     <meta name="apple-mobile-web-app-title" content="MADE J">
     <meta name="theme-color" content="#f5f5f7">
     <title>MADE J Booking</title>
-    <link rel="stylesheet" href="styles.css?v=20260514-11">
+    <link rel="stylesheet" href="styles.css?v=20260514-12">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script defer src="supabase-config.js"></script>
-    <script defer src="admin.js?v=20260514-11"></script>
+    <script defer src="admin.js?v=20260514-12"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -55,15 +55,15 @@
             </div>
             <div class="dashboard-strip" aria-label="예약 대시보드">
               <div>
-                <span>월 전체</span>
+                <span>전체</span>
                 <strong id="totalCompletedCount">0건</strong>
               </div>
               <div>
-                <span>월 완료</span>
+                <span>완료</span>
                 <strong id="monthCompletedCount">0건</strong>
               </div>
               <div>
-                <span>월 예정</span>
+                <span>대기</span>
                 <strong id="activeBookingCount">0건</strong>
               </div>
             </div>
@@ -85,11 +85,14 @@
           </section>
 
           <section class="sheet">
-            <div class="section-title">
-              <h2>예약 등록</h2>
-              <p>고객명과 연락처가 기존 고객과 같으면 자동으로 고객 DB에 합쳐집니다.</p>
+            <div class="section-title collapsible-title">
+              <div>
+                <h2>예약 등록</h2>
+                <p>고객명과 연락처가 기존 고객과 같으면 자동으로 고객 DB에 합쳐집니다.</p>
+              </div>
+              <button id="toggleBookingFormButton" class="text-button" type="button" aria-expanded="false">펼치기</button>
             </div>
-            <form id="ownerBookingForm" autocomplete="on">
+            <form id="ownerBookingForm" class="booking-form-panel collapsed" autocomplete="on">
               <div class="field-row">
                 <div class="field">
                   <label for="bookingDate">날짜</label>

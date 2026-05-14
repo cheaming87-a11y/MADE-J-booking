@@ -179,6 +179,24 @@ h2 {
   gap: 6px;
 }
 
+.collapsible-title {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.collapsible-title > div {
+  min-width: 0;
+}
+
+.booking-form-panel {
+  display: block;
+}
+
+.booking-form-panel.collapsed {
+  display: none;
+}
+
 .calendar-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -712,7 +730,8 @@ textarea:focus {
   .field-row,
   .booking-card,
   .date-strip,
-  .calendar-header {
+  .calendar-header,
+  .collapsible-title {
     grid-template-columns: 1fr;
   }
 

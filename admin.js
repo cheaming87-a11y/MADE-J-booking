@@ -30,6 +30,7 @@ const monthCompletedCount = document.querySelector("#monthCompletedCount");
 const activeBookingCount = document.querySelector("#activeBookingCount");
 const backToCalendarButton = document.querySelector("#backToCalendarButton");
 const bookingForm = document.querySelector("#ownerBookingForm");
+const toggleBookingFormButton = document.querySelector("#toggleBookingFormButton");
 const bookingDate = document.querySelector("#bookingDate");
 const bookingTime = document.querySelector("#bookingTime");
 const customerName = document.querySelector("#customerName");
@@ -228,6 +229,12 @@ function renderCalendar() {
     calendarGrid.appendChild(button);
   }
   renderDashboard();
+}
+
+function setBookingFormOpen(isOpen) {
+  bookingForm.classList.toggle("collapsed", !isOpen);
+  toggleBookingFormButton.textContent = isOpen ? "접기" : "펼치기";
+  toggleBookingFormButton.setAttribute("aria-expanded", String(isOpen));
 }
 
 function moveMainMonth(offset) {
@@ -444,6 +451,7 @@ async function saveBooking(event) {
   bookingForm.reset();
   bookingDate.value = filterDate.value;
   bookingTime.value = "10:00";
+  setBookingFormOpen(false);
   renderServiceOptions();
   setMessage(formMessage, "예약을 저장했습니다.", "success");
   await loadCustomers();
@@ -585,6 +593,7 @@ async function submitMoveBooking() {
 function openDate(dateKey) {
   filterDate.value = dateKey;
   bookingDate.value = dateKey;
+  setBookingFormOpen(false);
   showView("booking");
   loadBookings();
 }
@@ -665,6 +674,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (calendarSwipeLock) return;
     const button = event.target.closest("[data-date]");
     if (button) openDate(button.dataset.date);
+  });
+  toggleBookingFormButton.addEventListener("click", () => {
+    setBookingFormOpen(bookingForm.classList.contains("collapsed"));
   });
   bookingForm.addEventListener("submit", saveBooking);
   adminPassword.addEventListener("keydown", (event) => {
