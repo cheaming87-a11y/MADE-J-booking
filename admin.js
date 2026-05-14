@@ -11,6 +11,8 @@ let calendarTouchStart = null;
 let calendarSwipeLock = false;
 let bookingPanelIndex = 0;
 let bookingTouchStart = null;
+let bookingCustomerMode = "none";
+let selectedBookingCustomer = null;
 
 const screenTitle = document.querySelector("#screenTitle");
 const loginPanel = document.querySelector("#loginPanel");
@@ -40,6 +42,10 @@ const bookingDate = document.querySelector("#bookingDate");
 const bookingTime = document.querySelector("#bookingTime");
 const customerName = document.querySelector("#customerName");
 const phone = document.querySelector("#phone");
+const bookingCustomerLookup = document.querySelector("#bookingCustomerLookup");
+const bookingCustomerMessage = document.querySelector("#bookingCustomerMessage");
+const bookingCustomerResults = document.querySelector("#bookingCustomerResults");
+const newBookingCustomerButton = document.querySelector("#newBookingCustomerButton");
 const servicePicker = document.querySelector("#servicePicker");
 const saveBookingButton = document.querySelector("#saveBookingButton");
 const formMessage = document.querySelector("#formMessage");
@@ -139,6 +145,73 @@ function escapeHtml(value) {
 
 function activeCustomers() {
   return customers.filter((customer) => customer.is_active !== false);
+}
+
+function resetBookingCustomerChoice() {
+  bookingCustomerMode = "none";
+  selectedBookingCustomer = null;
+}
+
+function bookingCustomerMatches(query) {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return [];
+  return activeCustomers()
+    .filter((customer) => `${customer.name || ""} ${customer.phone || ""}`.toLowerCase().includes(normalized))
+    .slice(0, 5);
+}
+
+function renderBookingCustomerLookup() {
+  const query = customerName.value.trim();
+  const matches = bookingCustomerMatches(query);
+  if (!query) {
+    bookingCustomerLookup.classList.add("hidden");
+    bookingCustomerResults.innerHTML = "";
+    resetBookingCustomerChoice();
+    return;
+  }
+  bookingCustomerLookup.classList.remove("hidden");
+  if (bookingCustomerMode === "existing" && selectedBookingCustomer) {
+    bookingCustomerMessage.textContent = `${selectedBookingCustomer.name} 고객을 선택했습니다.`;
+    bookingCustomerResults.innerHTML = "";
+    newBookingCustomerButton.classList.add("hidden");
+    return;
+  }
+  if (bookingCustomerMode === "new") {
+    bookingCustomerMessage.textContent = "신규 고객으로 등록됩니다.";
+    bookingCustomerResults.innerHTML = "";
+    newBookingCustomerButton.classList.add("hidden");
+    return;
+  }
+  bookingCustomerMessage.textContent = matches.length ? "기존 고객을 선택하세요." : "일치하는 고객이 없습니다.";
+  bookingCustomerResults.innerHTML = matches
+    .map((customer) => `
+      <button class="lookup-result" type="button" data-action="select-booking-customer" data-id="${customer.id}">
+        <span><strong>${escapeHtml(customer.name)}</strong><br>${escapeHtml(customer.phone || "연락처 없음")}</span>
+        <em>선택</em>
+      </button>
+    `)
+    .join("");
+  newBookingCustomerButton.classList.toggle("hidden", matches.length > 0);
+}
+
+function selectBookingCustomer(id) {
+  const customer = customers.find((item) => item.id === id);
+  if (!customer) return;
+  selectedBookingCustomer = customer;
+  bookingCustomerMode = "existing";
+  customerName.value = customer.name || "";
+  phone.value = customer.phone || "";
+  renderBookingCustomerLookup();
+}
+
+function markNewBookingCustomer() {
+  if (!customerName.value.trim()) {
+    setMessage(formMessage, "고객명을 먼저 입력하세요.", "error");
+    return;
+  }
+  selectedBookingCustomer = null;
+  bookingCustomerMode = "new";
+  renderBookingCustomerLookup();
 }
 
 function selectedService() {
@@ -432,6 +505,16 @@ async function upsertCustomer() {
   const name = customerName.value.trim();
   const phoneValue = phone.value.trim();
   if (!name) return null;
+  if (bookingCustomerMode === "existing" && selectedBookingCustomer) {
+    const { data } = await client
+      .from("customers")
+      .update({ name, phone: phoneValue || selectedBookingCustomer.phone || null, is_active: true, updated_at: new Date().toISOString() })
+      .eq("id", selectedBookingCustomer.id)
+      .select()
+      .single();
+    return data || selectedBookingCustomer;
+  }
+  if (bookingCustomerMode !== "new") return null;
   const existing = customers.find((customer) => {
     const samePhone = phoneValue && customer.phone === phoneValue;
     const sameName = customer.name === name;
@@ -457,6 +540,15 @@ async function upsertCustomer() {
 async function saveBooking(event) {
   event.preventDefault();
   if (!client) return;
+  if (!customerName.value.trim()) {
+    setMessage(formMessage, "고객명을 입력하세요.", "error");
+    return;
+  }
+  if (bookingCustomerMode === "none") {
+    renderBookingCustomerLookup();
+    setMessage(formMessage, "기존 고객을 선택하거나 신규 고객으로 등록을 눌러주세요.", "error");
+    return;
+  }
   saveBookingButton.disabled = true;
   setMessage(formMessage, "예약을 저장하는 중입니다.");
   const customer = await upsertCustomer();
@@ -481,6 +573,8 @@ async function saveBooking(event) {
     return;
   }
   bookingForm.reset();
+  resetBookingCustomerChoice();
+  renderBookingCustomerLookup();
   bookingDate.value = filterDate.value;
   bookingTime.value = "10:00";
   setBookingPanel(1);
@@ -736,6 +830,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (event.key === "ArrowRight") setBookingPanel(1);
   });
   bookingForm.addEventListener("submit", saveBooking);
+  customerName.addEventListener("input", () => {
+    resetBookingCustomerChoice();
+    renderBookingCustomerLookup();
+  });
+  phone.addEventListener("input", () => {
+    if (bookingCustomerMode === "existing") return;
+    if (bookingCustomerMode === "new") renderBookingCustomerLookup();
+  });
+  bookingCustomerResults.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-action='select-booking-customer']");
+    if (button) selectBookingCustomer(button.dataset.id);
+  });
+  newBookingCustomerButton.addEventListener("click", markNewBookingCustomer);
   adminPassword.addEventListener("keydown", (event) => {
     if (event.key === "Enter") login();
   });
