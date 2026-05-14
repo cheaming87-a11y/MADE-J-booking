@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MADE J Booking</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script defer src="supabase-config.js"></script>
+    <script defer src="app.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Reservation</p>
+          <h1>MADE J Booking</h1>
+          <p class="lead">원하는 날짜와 시간을 선택해 예약을 접수하세요.</p>
+        </div>
+        <a class="admin-link" href="admin.html" aria-label="관리자 페이지">Admin</a>
+      </section>
+
+      <section class="booking-layout">
+        <form id="bookingForm" class="panel" autocomplete="on">
+          <div class="field">
+            <label for="bookingDate">날짜</label>
+            <input id="bookingDate" name="bookingDate" type="date" required>
+          </div>
+
+          <div class="field">
+            <label>시간</label>
+            <div id="timeGrid" class="time-grid" aria-live="polite"></div>
+          </div>
+
+          <div class="field">
+            <label for="customerName">이름</label>
+            <input id="customerName" name="customerName" type="text" placeholder="예약자 이름" required>
+          </div>
+
+          <div class="field">
+            <label for="phone">연락처</label>
+            <input id="phone" name="phone" type="tel" placeholder="010-0000-0000" required>
+          </div>
+
+          <div class="field">
+            <label for="note">요청사항</label>
+            <textarea id="note" name="note" rows="4" placeholder="선택 입력"></textarea>
+          </div>
+
+          <button id="submitButton" class="primary-button" type="submit">예약하기</button>
+          <p id="formMessage" class="message" role="status"></p>
+        </form>
+
+        <aside class="summary">
+          <h2>예약 안내</h2>
+          <dl>
+            <div>
+              <dt>운영 시간</dt>
+              <dd>10:00 - 19:00</dd>
+            </div>
+            <div>
+              <dt>예약 단위</dt>
+              <dd>1시간</dd>
+            </div>
+            <div>
+              <dt>확정 방식</dt>
+              <dd>예약 가능한 시간만 접수됩니다.</dd>
+            </div>
+          </dl>
+        </aside>
+      </section>
+    </main>
+  </body>
+</html>
+
