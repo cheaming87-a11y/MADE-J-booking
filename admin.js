@@ -162,7 +162,7 @@ function customerMatchesBooking(customer, booking) {
 function customerStats(customer) {
   const today = getToday();
   const dates = customerBookings
-    .filter((booking) => customerMatchesBooking(customer, booking))
+    .filter((booking) => customerMatchesBooking(customer, booking) && booking.status !== "no_show")
     .map((booking) => booking.booking_date)
     .filter((date) => date && date <= today)
     .sort();
@@ -185,7 +185,7 @@ function statsForBooking(booking) {
   const customer = customers.find((item) => customerMatchesBooking(item, booking));
   if (!customer) return { recentVisit: "없음", cycleText: "계산 전" };
   const datesBefore = customerBookings
-    .filter((item) => customerMatchesBooking(customer, item))
+    .filter((item) => customerMatchesBooking(customer, item) && item.status !== "no_show")
     .map((item) => item.booking_date)
     .filter((date) => date && date < booking.booking_date)
     .sort();
@@ -371,6 +371,7 @@ function renderRows(bookings) {
         <div class="booking-actions">
           <button class="mini-button success" type="button" data-action="complete-booking" data-id="${booking.id}">완료</button>
           <button class="mini-button" type="button" data-action="move-booking" data-id="${booking.id}" data-date="${booking.booking_date}" data-time="${formatTime(booking.booking_time)}" data-customer="${escapeHtml(booking.customer_name)}">예약변경</button>
+          <button class="mini-button muted" type="button" data-action="noshow-booking" data-id="${booking.id}">노쇼</button>
           <button class="mini-button danger" type="button" data-action="cancel-booking" data-id="${booking.id}">예약취소</button>
         </div>
       </div>
@@ -562,6 +563,18 @@ async function completeBooking(id) {
   await loadBookings();
 }
 
+async function noShowBooking(id) {
+  if (!client) return;
+  if (!window.confirm("이 예약을 노쇼 처리할까요? 노쇼는 예약목록에서 빠지고 방문횟수에는 포함되지 않습니다.")) return;
+  const { error } = await client.from("bookings").update({ status: "no_show" }).eq("id", id);
+  if (error) {
+    setMessage(adminMessage, "노쇼 처리에 실패했습니다. DB 업데이트가 필요합니다.", "error");
+    return;
+  }
+  await loadCustomers();
+  await loadBookings();
+}
+
 function openMoveDialog(id, currentDate, currentTime, customer) {
   moveTarget = { id, customer };
   selectedMoveDate = currentDate || filterDate.value || getToday();
@@ -718,6 +731,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!button) return;
     if (button.dataset.action === "complete-booking") completeBooking(button.dataset.id);
     if (button.dataset.action === "move-booking") openMoveDialog(button.dataset.id, button.dataset.date, button.dataset.time, button.dataset.customer);
+    if (button.dataset.action === "noshow-booking") noShowBooking(button.dataset.id);
     if (button.dataset.action === "cancel-booking") cancelBooking(button.dataset.id);
   });
   customerRows.addEventListener("click", (event) => {

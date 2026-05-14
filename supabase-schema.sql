@@ -10,7 +10,7 @@ create table if not exists public.bookings (
   customer_name text not null,
   phone text not null,
   note text,
-  status text not null default 'confirmed' check (status in ('confirmed', 'cancelled', 'completed')),
+  status text not null default 'confirmed' check (status in ('confirmed', 'cancelled', 'completed', 'no_show')),
   created_at timestamptz not null default now()
 );
 
@@ -69,7 +69,7 @@ on public.bookings
 for update
 to authenticated
 using (true)
-with check (status in ('confirmed', 'cancelled', 'completed'));
+with check (status in ('confirmed', 'cancelled', 'completed', 'no_show'));
 
 drop policy if exists "Admins can delete bookings" on public.bookings;
 create policy "Admins can delete bookings"
