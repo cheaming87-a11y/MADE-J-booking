@@ -7,10 +7,10 @@
     <meta name="apple-mobile-web-app-title" content="MADE J">
     <meta name="theme-color" content="#f5f5f7">
     <title>MADE J Booking</title>
-    <link rel="stylesheet" href="styles.css?v=20260514-5">
+    <link rel="stylesheet" href="styles.css?v=20260514-6">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script defer src="supabase-config.js"></script>
-    <script defer src="admin.js?v=20260514-5"></script>
+    <script defer src="admin.js?v=20260514-6"></script>
   </head>
   <body>
     <main class="app-shell">
@@ -101,6 +101,11 @@
               </div>
 
               <div class="field">
+                <label for="servicePicker">시술 종류</label>
+                <select id="servicePicker" name="servicePicker" required></select>
+              </div>
+
+              <div class="field">
                 <label for="note">메모</label>
                 <textarea id="note" name="note" rows="3" placeholder="시술 내용, 특이사항, 결제 메모"></textarea>
               </div>
@@ -123,7 +128,11 @@
           <section class="sheet">
             <div class="section-title">
               <h2>고객 DB</h2>
-              <p id="customerMessage" role="status">예약 등록 시 고객 정보가 자동 저장됩니다.</p>
+              <p id="customerMessage" role="status">이름이나 연락처로 검색하세요.</p>
+            </div>
+            <div class="field">
+              <label for="customerSearch">고객 검색</label>
+              <input id="customerSearch" type="search" placeholder="고객명 또는 전화번호" autocomplete="off">
             </div>
             <div id="customerRows" class="compact-list"></div>
           </section>

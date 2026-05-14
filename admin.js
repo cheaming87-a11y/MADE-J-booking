@@ -1,6 +1,7 @@
 let client = null;
 let customers = [];
 let customerBookings = [];
+let services = [];
 let monthCursor = new Date();
 
 const screenTitle = document.querySelector("#screenTitle");
@@ -17,7 +18,6 @@ const calendarView = document.querySelector("#calendarView");
 const bookingView = document.querySelector("#bookingView");
 const customerView = document.querySelector("#customerView");
 const calendarTitle = document.querySelector("#calendarTitle");
-const calendarMessage = document.querySelector("#calendarMessage");
 const calendarGrid = document.querySelector("#calendarGrid");
 const prevMonthButton = document.querySelector("#prevMonthButton");
 const nextMonthButton = document.querySelector("#nextMonthButton");
@@ -27,6 +27,7 @@ const bookingDate = document.querySelector("#bookingDate");
 const bookingTime = document.querySelector("#bookingTime");
 const customerName = document.querySelector("#customerName");
 const phone = document.querySelector("#phone");
+const servicePicker = document.querySelector("#servicePicker");
 const saveBookingButton = document.querySelector("#saveBookingButton");
 const formMessage = document.querySelector("#formMessage");
 const filterDate = document.querySelector("#filterDate");
@@ -35,6 +36,15 @@ const bookingRows = document.querySelector("#bookingRows");
 const adminMessage = document.querySelector("#adminMessage");
 const customerRows = document.querySelector("#customerRows");
 const customerMessage = document.querySelector("#customerMessage");
+const customerSearch = document.querySelector("#customerSearch");
+
+const fallbackServices = [
+  { id: "fallback-nail", name: "네일" },
+  { id: "fallback-pedi", name: "패디" },
+  { id: "fallback-nail-pedi", name: "네일+패디" },
+  { id: "fallback-repair", name: "보수" },
+  { id: "fallback-removal", name: "제거" }
+];
 
 function setMessage(element, text, type = "") {
   element.textContent = text;
@@ -101,6 +111,17 @@ function activeCustomers() {
   return customers.filter((customer) => customer.is_active !== false);
 }
 
+function selectedService() {
+  return services.find((service) => service.id === servicePicker.value) || services[0] || fallbackServices[0];
+}
+
+function renderServiceOptions() {
+  const source = services.length ? services : fallbackServices;
+  servicePicker.innerHTML = source
+    .map((service) => `<option value="${service.id}">${escapeHtml(service.name)}</option>`)
+    .join("");
+}
+
 function customerMatchesBooking(customer, booking) {
   if (booking.customer_id && booking.customer_id === customer.id) return true;
   const samePhone = customer.phone && booking.phone && customer.phone === booking.phone;
@@ -117,11 +138,9 @@ function customerStats(customer) {
   const uniqueDates = [...new Set(dates)];
   const visitCount = uniqueDates.length;
   const recentVisit = visitCount ? uniqueDates[visitCount - 1] : "없음";
-
   if (uniqueDates.length < 2) {
     return { visitCount, recentVisit, cycleText: "계산 전" };
   }
-
   const intervals = [];
   for (let index = 1; index < uniqueDates.length; index += 1) {
     const gap = daysBetween(uniqueDates[index - 1], uniqueDates[index]);
@@ -156,11 +175,9 @@ function renderCalendar() {
   const today = getToday();
   calendarTitle.textContent = `${year}년 ${month + 1}월`;
   calendarGrid.innerHTML = "";
-
   for (let index = 0; index < first.getDay(); index += 1) {
     calendarGrid.appendChild(document.createElement("div"));
   }
-
   for (let day = 1; day <= last.getDate(); day += 1) {
     const date = new Date(year, month, day);
     const dateKey = toDateKey(date);
@@ -176,13 +193,18 @@ function renderCalendar() {
 }
 
 function renderCustomers() {
-  const visibleCustomers = activeCustomers();
+  const query = customerSearch.value.trim().toLowerCase();
+  const visibleCustomers = activeCustomers().filter((customer) => {
+    if (!query) return true;
+    return `${customer.name || ""} ${customer.phone || ""}`.toLowerCase().includes(query);
+  });
+  const displayCustomers = visibleCustomers.slice(0, 50);
   if (!visibleCustomers.length) {
-    customerRows.innerHTML = `<div class="empty-state">저장된 고객이 없습니다.</div>`;
-    setMessage(customerMessage, "예약 등록 시 고객 정보가 자동 저장됩니다.");
+    customerRows.innerHTML = `<div class="empty-state">${query ? "검색 결과가 없습니다." : "저장된 고객이 없습니다."}</div>`;
+    setMessage(customerMessage, query ? "다른 이름이나 연락처로 검색해보세요." : "예약 등록 시 고객 정보가 자동 저장됩니다.");
     return;
   }
-  customerRows.innerHTML = visibleCustomers
+  customerRows.innerHTML = displayCustomers
     .map((customer) => {
       const stats = customerStats(customer);
       return `
@@ -204,7 +226,8 @@ function renderCustomers() {
       `;
     })
     .join("");
-  setMessage(customerMessage, `${visibleCustomers.length}명의 고객`, "success");
+  const suffix = visibleCustomers.length > displayCustomers.length ? ` · 최근 ${displayCustomers.length}명 표시` : "";
+  setMessage(customerMessage, `${visibleCustomers.length}명의 고객${suffix}`, "success");
 }
 
 function renderRows(bookings) {
@@ -215,6 +238,7 @@ function renderRows(bookings) {
   }
   bookings.forEach((booking) => {
     const stats = statsForBooking(booking);
+    const serviceName = booking.service_name || "시술 미지정";
     const card = document.createElement("article");
     card.className = "booking-card";
     card.innerHTML = `
@@ -224,6 +248,7 @@ function renderRows(bookings) {
           <div class="booking-name">${escapeHtml(booking.customer_name)}</div>
           <span class="status">예약</span>
         </div>
+        <div class="booking-service">${escapeHtml(serviceName)}</div>
         ${booking.phone ? `<div class="booking-phone">${escapeHtml(booking.phone)}</div>` : ""}
         <div class="booking-service">마지막 방문 ${escapeHtml(stats.recentVisit)} · 재방문주기 ${escapeHtml(stats.cycleText)}</div>
         ${booking.note ? `<div class="booking-note">${escapeHtml(booking.note)}</div>` : ""}
@@ -232,6 +257,16 @@ function renderRows(bookings) {
     `;
     bookingRows.appendChild(card);
   });
+}
+
+async function loadServices() {
+  const { data, error } = await client
+    .from("services")
+    .select("id,name,sort_order,is_active")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+  services = error ? fallbackServices : data || fallbackServices;
+  renderServiceOptions();
 }
 
 async function loadCustomers() {
@@ -293,13 +328,14 @@ async function saveBooking(event) {
   saveBookingButton.disabled = true;
   setMessage(formMessage, "예약을 저장하는 중입니다.");
   const customer = await upsertCustomer();
+  const service = selectedService();
   const payload = {
     booking_date: bookingDate.value,
     booking_time: bookingTime.value,
     end_time: null,
     customer_id: customer?.id || null,
-    service_id: null,
-    service_name: null,
+    service_id: service.id?.startsWith("fallback-") ? null : service.id,
+    service_name: service.name,
     duration_minutes: 0,
     customer_name: customerName.value.trim(),
     phone: phone.value.trim() || "",
@@ -315,6 +351,7 @@ async function saveBooking(event) {
   bookingForm.reset();
   bookingDate.value = filterDate.value;
   bookingTime.value = "10:00";
+  renderServiceOptions();
   setMessage(formMessage, "예약을 저장했습니다.", "success");
   await loadCustomers();
   await loadBookings();
@@ -389,7 +426,7 @@ async function login() {
   setMessage(loginMessage, "");
   showAdmin(true);
   showView("calendar");
-  await loadCustomers();
+  await Promise.all([loadServices(), loadCustomers()]);
 }
 
 async function logout() {
@@ -408,6 +445,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   bookingTime.value = "10:00";
   monthCursor = new Date(`${today}T00:00:00`);
   client = initSupabase();
+  renderServiceOptions();
 
   loginButton.addEventListener("click", login);
   logoutButton.addEventListener("click", logout);
@@ -445,12 +483,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (button.dataset.action === "edit-customer") editCustomer(button.dataset.id);
     if (button.dataset.action === "delete-customer") deleteCustomer(button.dataset.id);
   });
+  customerSearch.addEventListener("input", renderCustomers);
 
   if (!client) return;
   const { data } = await client.auth.getSession();
   showAdmin(Boolean(data.session));
   if (data.session) {
     showView("calendar");
-    await loadCustomers();
+    await Promise.all([loadServices(), loadCustomers()]);
   }
 });
