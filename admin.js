@@ -739,7 +739,7 @@ async function submitMoveBooking() {
 function openDate(dateKey) {
   filterDate.value = dateKey;
   bookingDate.value = dateKey;
-  setBookingPanel(1);
+  setBookingPanel(0);
   showView("booking");
   loadBookings();
 }
