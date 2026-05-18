@@ -276,7 +276,16 @@ function statsForBooking(booking) {
 }
 
 function bookingsForDate(dateKey) {
-  return customerBookings.filter((booking) => booking.booking_date === dateKey && booking.status === "confirmed");
+  return customerBookings.filter((booking) => booking.booking_date === dateKey && ["confirmed", "completed"].includes(booking.status));
+}
+
+function sortBookingsForList(bookings) {
+  return [...bookings].sort((left, right) => {
+    const leftStatusRank = left.status === "completed" ? 1 : 0;
+    const rightStatusRank = right.status === "completed" ? 1 : 0;
+    if (leftStatusRank !== rightStatusRank) return leftStatusRank - rightStatusRank;
+    return String(left.booking_time || "").localeCompare(String(right.booking_time || ""));
+  });
 }
 
 function renderDashboard() {
@@ -435,29 +444,32 @@ function renderRows(bookings) {
     bookingRows.innerHTML = `<div class="empty-state">이 날짜에는 예약이 없습니다.</div>`;
     return;
   }
-  bookings.forEach((booking) => {
+  sortBookingsForList(bookings).forEach((booking) => {
     const stats = statsForBooking(booking);
     const serviceName = booking.service_name || "시술 미지정";
+    const isCompleted = booking.status === "completed";
     const card = document.createElement("article");
-    card.className = "booking-card";
+    card.className = `booking-card${isCompleted ? " completed" : ""}`;
     card.innerHTML = `
       <div class="booking-time"><span>${formatTime(booking.booking_time)}</span></div>
       <div class="booking-main">
         <div class="booking-top">
           <div class="booking-name">${escapeHtml(booking.customer_name)}</div>
-          <span class="status">예약</span>
+          <span class="status${isCompleted ? " completed" : ""}">${isCompleted ? "완료" : "예약"}</span>
         </div>
         <div class="booking-service">${escapeHtml(serviceName)}</div>
         ${booking.phone ? `<div class="booking-phone">${escapeHtml(booking.phone)}</div>` : ""}
         <div class="booking-service">마지막 방문 ${escapeHtml(stats.recentVisit)} · 재방문주기 ${escapeHtml(stats.cycleText)}</div>
         <div class="booking-service">방문 ${stats.visitCount}회 · 노쇼 ${stats.noShowCount}회 · 취소 ${stats.cancelCount}회</div>
         ${booking.note ? `<div class="booking-note">${escapeHtml(booking.note)}</div>` : ""}
-        <div class="booking-actions">
-          <button class="mini-button success" type="button" data-action="complete-booking" data-id="${booking.id}">완료</button>
-          <button class="mini-button" type="button" data-action="move-booking" data-id="${booking.id}" data-date="${booking.booking_date}" data-time="${formatTime(booking.booking_time)}" data-customer="${escapeHtml(booking.customer_name)}">예약변경</button>
-          <button class="mini-button muted" type="button" data-action="noshow-booking" data-id="${booking.id}">노쇼</button>
-          <button class="mini-button danger" type="button" data-action="cancel-booking" data-id="${booking.id}">예약취소</button>
-        </div>
+        ${isCompleted ? "" : `
+          <div class="booking-actions">
+            <button class="mini-button success" type="button" data-action="complete-booking" data-id="${booking.id}">완료</button>
+            <button class="mini-button" type="button" data-action="move-booking" data-id="${booking.id}" data-date="${booking.booking_date}" data-time="${formatTime(booking.booking_time)}" data-customer="${escapeHtml(booking.customer_name)}">예약변경</button>
+            <button class="mini-button muted" type="button" data-action="noshow-booking" data-id="${booking.id}">노쇼</button>
+            <button class="mini-button danger" type="button" data-action="cancel-booking" data-id="${booking.id}">예약취소</button>
+          </div>
+        `}
       </div>
     `;
     bookingRows.appendChild(card);
@@ -492,7 +504,7 @@ async function loadBookings() {
     .from("bookings")
     .select("*")
     .eq("booking_date", filterDate.value)
-    .eq("status", "confirmed")
+    .in("status", ["confirmed", "completed"])
     .order("booking_time", { ascending: true });
   if (error) {
     setMessage(adminMessage, "예약 목록을 불러오지 못했습니다.", "error");
@@ -665,7 +677,7 @@ async function cancelBooking(id) {
 
 async function completeBooking(id) {
   if (!client) return;
-  if (!window.confirm("이 예약을 완료 처리할까요? 완료된 예약은 방문기록에 남고 예약목록에서는 사라집니다.")) return;
+  if (!window.confirm("이 예약을 완료 처리할까요? 완료된 예약은 회색으로 표시되고 예약목록 아래쪽에 남습니다.")) return;
   const { error } = await client.from("bookings").update({ status: "completed" }).eq("id", id);
   if (error) {
     setMessage(adminMessage, "완료 처리에 실패했습니다. DB 업데이트가 필요합니다.", "error");
