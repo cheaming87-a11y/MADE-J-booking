@@ -930,7 +930,13 @@ textarea:focus {
   }
 
   .customer-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .customer-stats span {
+    padding: 7px 4px;
+    font-size: 11px;
   }
 
   .modal {
