@@ -692,7 +692,7 @@ textarea:focus {
 
 .customer-stats span:nth-child(n + 4) {
   grid-column: 1 / -1;
-  text-align: left;
+  text-align: center;
 }
 
 .customer-actions {
@@ -946,7 +946,7 @@ textarea:focus {
 
   .customer-stats span:nth-child(n + 4) {
     padding-inline: 9px;
-    text-align: left;
+    text-align: center;
   }
 
   .modal {
