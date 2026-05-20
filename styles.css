@@ -975,7 +975,20 @@ textarea:focus {
   }
 
   .dashboard-strip {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .dashboard-strip div {
+    padding: 7px 4px;
+  }
+
+  .dashboard-strip span {
+    font-size: 10px;
+  }
+
+  .dashboard-strip strong {
+    font-size: 15px;
   }
 
   .lookup-result {
