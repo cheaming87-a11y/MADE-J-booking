@@ -690,6 +690,11 @@ textarea:focus {
   text-align: center;
 }
 
+.customer-stats span:nth-child(n + 4) {
+  grid-column: 1 / -1;
+  text-align: left;
+}
+
 .customer-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -937,6 +942,11 @@ textarea:focus {
   .customer-stats span {
     padding: 7px 4px;
     font-size: 11px;
+  }
+
+  .customer-stats span:nth-child(n + 4) {
+    padding-inline: 9px;
+    text-align: left;
   }
 
   .modal {
