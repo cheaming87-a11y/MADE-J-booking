@@ -867,9 +867,26 @@ textarea:focus {
 
   .field-row,
   .booking-card,
-  .date-strip,
   .calendar-header {
     grid-template-columns: 1fr;
+  }
+
+  .date-strip {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 6px;
+    border-radius: 18px;
+    padding: 10px;
+  }
+
+  .date-strip label {
+    display: none;
+  }
+
+  .date-strip input {
+    min-height: 38px;
+    border-radius: 999px;
+    padding: 8px 10px;
+    text-align: center;
   }
 
   .app-header {
@@ -882,7 +899,10 @@ textarea:focus {
   }
 
   .date-strip .text-button {
-    width: fit-content;
+    width: auto;
+    min-height: 38px;
+    padding: 0 10px;
+    font-size: 13px;
   }
 
   .booking-time {
