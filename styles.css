@@ -17,6 +17,11 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  max-width: 100%;
+}
+
 html {
   min-height: 100%;
   background: var(--bg);
@@ -40,6 +45,7 @@ input,
 select,
 textarea {
   font: inherit;
+  max-width: 100%;
 }
 
 .app-shell {
@@ -55,6 +61,10 @@ textarea {
   justify-content: space-between;
   gap: 16px;
   padding: 18px 2px 20px;
+}
+
+.app-header > div {
+  min-width: 0;
 }
 
 .eyebrow {
@@ -76,12 +86,14 @@ h1 {
   font-weight: 800;
   line-height: 1.05;
   letter-spacing: 0;
+  overflow-wrap: anywhere;
 }
 
 h2 {
   font-size: 21px;
   font-weight: 800;
   letter-spacing: 0;
+  overflow-wrap: anywhere;
 }
 
 .auth-card,
@@ -470,6 +482,7 @@ textarea:focus {
   color: var(--blue);
   padding: 0 13px;
   font-weight: 700;
+  min-width: 0;
 }
 
 .icon-button {
@@ -551,6 +564,7 @@ textarea:focus {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  min-width: 0;
 }
 
 .booking-name {
@@ -628,10 +642,12 @@ textarea:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: var(--sheet-solid);
   padding: 12px 14px;
+  min-width: 0;
 }
 
 .customer-card {
@@ -691,6 +707,8 @@ textarea:focus {
   font-size: 13px;
   font-weight: 800;
   overflow-wrap: anywhere;
+  min-width: 0;
+  padding: 0 8px;
 }
 
 .mini-button.danger {
@@ -803,6 +821,11 @@ textarea:focus {
   text-align: center;
 }
 
+.move-calendar-header strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .move-calendar-grid .calendar-day {
   min-height: 46px;
   border-radius: 14px;
@@ -849,9 +872,41 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 
+  .app-header {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .app-header .icon-button {
+    flex: 0 0 auto;
+  }
+
+  .date-strip .text-button {
+    width: fit-content;
+  }
+
   .booking-time {
     width: fit-content;
     min-width: 72px;
+  }
+
+  .booking-top {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .booking-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .compact-item {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .customer-actions {
+    grid-template-columns: 1fr;
   }
 
   .customer-stats {
@@ -868,4 +923,77 @@ textarea:focus {
     padding: 16px;
   }
 
+}
+
+@media (max-width: 430px) {
+  .app-shell {
+    padding-inline: 10px;
+  }
+
+  h1 {
+    font-size: 27px;
+  }
+
+  h2 {
+    font-size: 19px;
+  }
+
+  .tabs,
+  .pager-indicator {
+    gap: 4px;
+  }
+
+  .tab-button,
+  .pager-indicator span {
+    font-size: 13px;
+    padding-inline: 4px;
+  }
+
+  .sheet,
+  .auth-card {
+    padding: 14px;
+  }
+
+  .calendar-weekdays,
+  .calendar-grid {
+    gap: 4px;
+  }
+
+  .calendar-day {
+    min-height: 46px;
+    border-radius: 12px;
+  }
+
+  .calendar-day strong {
+    font-size: 15px;
+  }
+
+  .calendar-day span {
+    max-width: 100%;
+    padding-inline: 4px;
+    font-size: 10px;
+  }
+
+  .dashboard-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .lookup-result {
+    grid-template-columns: 1fr;
+  }
+
+  .lookup-result em {
+    justify-self: start;
+  }
+
+  .modal-heading,
+  .move-calendar-header {
+    grid-template-columns: 1fr;
+    text-align: left;
+  }
+
+  .modal-heading .text-button,
+  .move-calendar-header .text-button {
+    width: fit-content;
+  }
 }
