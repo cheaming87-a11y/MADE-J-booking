@@ -872,7 +872,7 @@ textarea:focus {
   }
 
   .date-strip {
-    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-columns: 74px minmax(0, 1fr) 74px;
     gap: 6px;
     border-radius: 18px;
     padding: 10px;
@@ -899,7 +899,7 @@ textarea:focus {
   }
 
   .date-strip .text-button {
-    width: auto;
+    width: 74px;
     min-height: 38px;
     padding: 0 10px;
     font-size: 13px;
