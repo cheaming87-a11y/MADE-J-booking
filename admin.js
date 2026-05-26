@@ -494,16 +494,20 @@ function renderRows(bookings) {
     const stats = statsForBooking(booking);
     const serviceName = booking.service_name || "시술 미지정";
     const isCompleted = booking.status === "completed";
-    const card = document.createElement("article");
+    const card = document.createElement("details");
     card.className = `booking-card${isCompleted ? " completed" : ""}`;
     card.innerHTML = `
-      <div class="booking-time"><span>${formatTime(booking.booking_time)}</span></div>
-      <div class="booking-main">
-        <div class="booking-top">
-          <div class="booking-name">${escapeHtml(booking.customer_name)}</div>
-          <span class="status${isCompleted ? " completed" : ""}">${isCompleted ? "완료" : "예약"}</span>
+      <summary class="booking-summary">
+        <div class="booking-time"><span>${formatTime(booking.booking_time)}</span></div>
+        <div class="booking-summary-main">
+          <div class="booking-top">
+            <div class="booking-name">${escapeHtml(booking.customer_name)}</div>
+            <span class="status${isCompleted ? " completed" : ""}">${isCompleted ? "완료" : "예약"}</span>
+          </div>
+          <div class="booking-service">${escapeHtml(serviceName)}</div>
         </div>
-        <div class="booking-service">${escapeHtml(serviceName)}</div>
+      </summary>
+      <div class="booking-detail">
         ${booking.phone ? `<div class="booking-phone">${escapeHtml(booking.phone)}</div>` : ""}
         <div class="booking-service">마지막 방문 ${escapeHtml(stats.recentVisit)} · 재방문주기 ${escapeHtml(stats.cycleText)}</div>
         <div class="booking-service">방문 ${stats.visitCount}회 · 노쇼 ${stats.noShowCount}회 · 취소 ${stats.cancelCount}회</div>

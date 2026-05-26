@@ -511,15 +511,38 @@ textarea:focus {
 }
 
 .booking-card {
-  display: grid;
-  grid-template-columns: 66px minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
   min-width: 0;
   border: 1px solid var(--line);
   border-radius: 20px;
   background: var(--sheet-solid);
   padding: 14px;
+}
+
+.booking-summary {
+  display: grid;
+  grid-template-columns: 66px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  cursor: pointer;
+  list-style: none;
+  min-width: 0;
+}
+
+.booking-summary::-webkit-details-marker {
+  display: none;
+}
+
+.booking-summary-main,
+.booking-detail {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.booking-detail {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 
 .booking-card.completed {
@@ -551,12 +574,6 @@ textarea:focus {
   color: var(--subtext);
   font-size: 12px;
   font-weight: 700;
-}
-
-.booking-main {
-  display: grid;
-  gap: 7px;
-  min-width: 0;
 }
 
 .booking-top {
@@ -920,7 +937,6 @@ textarea:focus {
   }
 
   .field-row,
-  .booking-card,
   .calendar-header {
     grid-template-columns: 1fr;
   }
@@ -968,13 +984,13 @@ textarea:focus {
   }
 
   .booking-time {
-    width: fit-content;
-    min-width: 72px;
+    min-width: 58px;
+    min-height: 48px;
   }
 
   .booking-top {
-    align-items: flex-start;
-    flex-wrap: wrap;
+    align-items: center;
+    flex-wrap: nowrap;
   }
 
   .booking-actions {
