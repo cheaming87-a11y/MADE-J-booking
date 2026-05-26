@@ -13,6 +13,11 @@ let bookingPanelIndex = 0;
 let bookingTouchStart = null;
 let bookingCustomerMode = "none";
 let selectedBookingCustomer = null;
+let customerPage = 1;
+let customerInitial = "all";
+
+const customerPageSize = 10;
+const koreanInitials = ["ㄱ", "ㄴ", "ㄷ", "ㄹ", "ㅁ", "ㅂ", "ㅅ", "ㅇ", "ㅈ", "ㅊ", "ㅋ", "ㅌ", "ㅍ", "ㅎ"];
 
 const screenTitle = document.querySelector("#screenTitle");
 const loginPanel = document.querySelector("#loginPanel");
@@ -56,6 +61,8 @@ const adminMessage = document.querySelector("#adminMessage");
 const customerRows = document.querySelector("#customerRows");
 const customerMessage = document.querySelector("#customerMessage");
 const customerSearch = document.querySelector("#customerSearch");
+const customerInitialFilters = document.querySelector("#customerInitialFilters");
+const customerPagination = document.querySelector("#customerPagination");
 const moveDialog = document.querySelector("#moveDialog");
 const moveTitle = document.querySelector("#moveTitle");
 const moveCalendarTitle = document.querySelector("#moveCalendarTitle");
@@ -145,6 +152,33 @@ function escapeHtml(value) {
 
 function activeCustomers() {
   return customers.filter((customer) => customer.is_active !== false);
+}
+
+function getKoreanInitial(value) {
+  const firstChar = String(value || "").trim().charAt(0);
+  if (!firstChar) return "";
+  const code = firstChar.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) return firstChar.toUpperCase();
+  const initialIndex = Math.floor((code - 0xac00) / 588);
+  return koreanInitials[initialIndex] || "";
+}
+
+function renderCustomerInitialFilters() {
+  const filters = ["all", ...koreanInitials, "etc"];
+  customerInitialFilters.innerHTML = filters
+    .map((filter) => {
+      const label = filter === "all" ? "전체" : filter === "etc" ? "기타" : filter;
+      const active = customerInitial === filter ? " active" : "";
+      return `<button class="initial-button${active}" type="button" data-initial="${filter}">${label}</button>`;
+    })
+    .join("");
+}
+
+function customerMatchesInitial(customer) {
+  if (customerInitial === "all") return true;
+  const initial = getKoreanInitial(customer.name);
+  if (customerInitial === "etc") return !koreanInitials.includes(initial);
+  return initial === customerInitial;
 }
 
 function resetBookingCustomerChoice() {
@@ -401,13 +435,19 @@ function renderMoveCalendar() {
 function renderCustomers() {
   const query = customerSearch.value.trim().toLowerCase();
   const visibleCustomers = activeCustomers().filter((customer) => {
+    if (!customerMatchesInitial(customer)) return false;
     if (!query) return true;
     return `${customer.name || ""} ${customer.phone || ""}`.toLowerCase().includes(query);
   });
-  const displayCustomers = visibleCustomers.slice(0, 50);
+  const totalPages = Math.max(1, Math.ceil(visibleCustomers.length / customerPageSize));
+  customerPage = Math.min(Math.max(customerPage, 1), totalPages);
+  const startIndex = (customerPage - 1) * customerPageSize;
+  const displayCustomers = visibleCustomers.slice(startIndex, startIndex + customerPageSize);
+  renderCustomerInitialFilters();
   if (!visibleCustomers.length) {
-    customerRows.innerHTML = `<div class="empty-state">${query ? "검색 결과가 없습니다." : "저장된 고객이 없습니다."}</div>`;
-    setMessage(customerMessage, query ? "다른 이름이나 연락처로 검색해보세요." : "예약 등록 시 고객 정보가 자동 저장됩니다.");
+    customerRows.innerHTML = `<div class="empty-state">${query || customerInitial !== "all" ? "검색 결과가 없습니다." : "저장된 고객이 없습니다."}</div>`;
+    customerPagination.innerHTML = "";
+    setMessage(customerMessage, query || customerInitial !== "all" ? "다른 이름, 연락처, 초성으로 검색해보세요." : "예약 등록 시 고객 정보가 자동 저장됩니다.");
     return;
   }
   customerRows.innerHTML = displayCustomers
@@ -434,8 +474,14 @@ function renderCustomers() {
       `;
     })
     .join("");
-  const suffix = visibleCustomers.length > displayCustomers.length ? ` · 최근 ${displayCustomers.length}명 표시` : "";
-  setMessage(customerMessage, `${visibleCustomers.length}명의 고객${suffix}`, "success");
+  customerPagination.innerHTML = `
+    <button class="page-button" type="button" data-page-action="prev" ${customerPage <= 1 ? "disabled" : ""}>이전</button>
+    <span>${customerPage} / ${totalPages}</span>
+    <button class="page-button" type="button" data-page-action="next" ${customerPage >= totalPages ? "disabled" : ""}>다음</button>
+  `;
+  const rangeStart = startIndex + 1;
+  const rangeEnd = startIndex + displayCustomers.length;
+  setMessage(customerMessage, `${visibleCustomers.length}명의 고객 · ${rangeStart}-${rangeEnd}번째 표시`, "success");
 }
 
 function renderRows(bookings) {
@@ -877,7 +923,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (button.dataset.action === "edit-customer") openCustomerDialog(button.dataset.id);
     if (button.dataset.action === "delete-customer") deleteCustomer(button.dataset.id);
   });
-  customerSearch.addEventListener("input", renderCustomers);
+  customerInitialFilters.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-initial]");
+    if (!button) return;
+    customerInitial = button.dataset.initial;
+    customerPage = 1;
+    renderCustomers();
+  });
+  customerPagination.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-page-action]");
+    if (!button || button.disabled) return;
+    customerPage += button.dataset.pageAction === "next" ? 1 : -1;
+    renderCustomers();
+  });
+  customerSearch.addEventListener("input", () => {
+    customerPage = 1;
+    renderCustomers();
+  });
 
   if (!client) return;
   const { data } = await client.auth.getSession();
